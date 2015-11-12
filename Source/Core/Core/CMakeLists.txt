@@ -10,6 +10,7 @@ add_library(core
   GeckoCodeConfig.cpp
   GeckoCode.cpp
   HotkeyManager.cpp
+  LuaInterface.cpp
   MemTools.cpp
   Movie.cpp
   NetPlayClient.cpp
@@ -283,6 +284,7 @@ PUBLIC
   enet
   inputcommon
   ${MBEDTLS_LIBRARIES}
+  luajit
   pugixml
   sfml-network
   sfml-system

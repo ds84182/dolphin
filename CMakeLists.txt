@@ -700,6 +700,9 @@ else()
   set(ICONV_LIBRARIES iconv)
 endif()
 
+add_subdirectory(Externals/luajit/)
+include_directories(Externals/luajit/src/)
+
 if(NOT ANDROID)
   find_package(HIDAPI)
   if(NOT HIDAPI_FOUND)
