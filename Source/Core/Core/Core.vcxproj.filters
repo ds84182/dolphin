@@ -898,6 +898,7 @@
     <ClCompile Include="IOS\Network\NCD\WiiNetConfig.cpp">
       <Filter>IOS\Network\NCD</Filter>
     </ClCompile>
+    <ClCompile Include="LuaInterface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BootManager.h" />
@@ -1574,6 +1575,7 @@
     <ClInclude Include="HW\WiimoteCommon\WiimoteReport.h">
       <Filter>HW %28Flipper/Hollywood%29\WiimoteCommon</Filter>
     </ClInclude>
+    <ClInclude Include="LuaInterface.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />

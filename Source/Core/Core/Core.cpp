@@ -37,6 +37,7 @@
 #include "Core/CoreTiming.h"
 #include "Core/DSPEmulator.h"
 #include "Core/Host.h"
+#include "Core/LuaInterface.h"
 #include "Core/MemTools.h"
 #ifdef USE_MEMORYWATCHER
 #include "Core/MemoryWatcher.h"
@@ -506,6 +507,8 @@ static void EmuThread(std::unique_ptr<BootParameters> boot)
 
   // Load GCM/DOL/ELF whatever ... we boot with the interpreter core
   PowerPC::SetMode(PowerPC::CoreMode::Interpreter);
+
+  Lua::Init();
 
   // Determine the CPU thread function
   void (*cpuThreadFunc)(const std::optional<std::string>& savestate_path, bool delete_savestate);
