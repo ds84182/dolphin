@@ -5,14 +5,17 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.util.Log;
 
 import org.dolphinemu.dolphinemu.NativeLibrary;
+import org.dolphinemu.dolphinemu.utils.Log;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+
+import rx.Observable;
+import rx.Subscriber;
 
 /**
  * A helper class that provides several utilities simplifying interaction with
@@ -85,36 +88,61 @@ public final class GameDatabase extends SQLiteOpenHelper
 	@Override
 	public void onCreate(SQLiteDatabase database)
 	{
-		Log.d("DolphinEmu", "GameDatabase - Creating database...");
+		Log.debug("[GameDatabase] GameDatabase - Creating database...");
 
-		Log.v("DolphinEmu", "Executing SQL: " + SQL_CREATE_GAMES);
+		Log.verbose("[GameDatabase] Executing SQL: " + SQL_CREATE_GAMES);
 		database.execSQL(SQL_CREATE_GAMES);
 
-		Log.v("DolphinEmu", "Executing SQL: " + SQL_CREATE_FOLDERS);
+		Log.verbose("[GameDatabase] Executing SQL: " + SQL_CREATE_FOLDERS);
 		database.execSQL(SQL_CREATE_FOLDERS);
 	}
 
 	@Override
 	public void onUpgrade(SQLiteDatabase database, int oldVersion, int newVersion)
 	{
-		Log.i("DolphinEmu", "Upgrading database from schema version " + oldVersion + " to " + newVersion);
+		Log.info("[GameDatabase] Upgrading database from schema version " + oldVersion + " to " + newVersion);
 
-		Log.v("DolphinEmu", "Executing SQL: " + SQL_DELETE_GAMES);
+		Log.verbose("[GameDatabase] Executing SQL: " + SQL_DELETE_GAMES);
 		database.execSQL(SQL_DELETE_GAMES);
 
-		Log.v("DolphinEmu", "Executing SQL: " + SQL_CREATE_GAMES);
+		Log.verbose("[GameDatabase] Executing SQL: " + SQL_CREATE_GAMES);
 		database.execSQL(SQL_CREATE_GAMES);
 
-		Log.v("DolphinEmu", "Re-scanning library with new schema.");
+		Log.verbose("[GameDatabase] Re-scanning library with new schema.");
 		scanLibrary(database);
 	}
 
 	public void scanLibrary(SQLiteDatabase database)
 	{
-		// TODO Before scanning known folders, go through the game table and remove any entries for which the file itself is missing.
+		// Before scanning known folders, go through the game table and remove any entries for which the file itself is missing.
+		Cursor fileCursor = database.query(TABLE_NAME_GAMES,
+				null,    // Get all columns.
+				null,    // Get all rows.
+				null,
+				null,    // No grouping.
+				null,
+				null);    // Order of games is irrelevant.
+
+		// Possibly overly defensive, but ensures that moveToNext() does not skip a row.
+		fileCursor.moveToPosition(-1);
+
+		while (fileCursor.moveToNext())
+		{
+			String gamePath = fileCursor.getString(GAME_COLUMN_PATH);
+			File game = new File(gamePath);
+
+			if (!game.exists())
+			{
+				Log.error("[GameDatabase] Game file no longer exists. Removing from the library: " + gamePath);
+				database.delete(TABLE_NAME_GAMES,
+						KEY_DB_ID + " = ?",
+						new String[]{Long.toString(fileCursor.getLong(COLUMN_DB_ID))});
+			}
+		}
+
 
 		// Get a cursor listing all the folders the user has added to the library.
-		Cursor cursor = database.query(TABLE_NAME_FOLDERS,
+		Cursor folderCursor = database.query(TABLE_NAME_FOLDERS,
 				null,    // Get all columns.
 				null,    // Get all rows.
 				null,
@@ -122,69 +150,150 @@ public final class GameDatabase extends SQLiteOpenHelper
 				null,
 				null);    // Order of folders is irrelevant.
 
-		Set<String> allowedExtensions = new HashSet<String>(Arrays.asList(".dff", ".dol", ".elf", ".gcm", ".gcz", ".iso", ".wad", ".wbfs"));
+		Set<String> allowedExtensions = new HashSet<String>(Arrays.asList(
+				".ciso", ".dff", ".dol", ".elf", ".gcm", ".gcz", ".iso", ".tgc", ".wad", ".wbfs"));
 
 		// Possibly overly defensive, but ensures that moveToNext() does not skip a row.
-		cursor.moveToPosition(-1);
+		folderCursor.moveToPosition(-1);
 
 		// Iterate through all results of the DB query (i.e. all folders in the library.)
-		while (cursor.moveToNext())
+		while (folderCursor.moveToNext())
 		{
 
-			String folderPath = cursor.getString(FOLDER_COLUMN_PATH);
+			String folderPath = folderCursor.getString(FOLDER_COLUMN_PATH);
 			File folder = new File(folderPath);
 
-			Log.i("DolphinEmu", "Reading files from library folder: " + folderPath);
+			Log.info("[GameDatabase] Reading files from library folder: " + folderPath);
 
 			// Iterate through every file in the folder.
 			File[] children = folder.listFiles();
-			for (File file : children)
+
+			if (children != null)
 			{
-				if (!file.isHidden() && !file.isDirectory())
+				for (File file : children)
 				{
-					String filePath = file.getPath();
-
-					int extensionStart = filePath.lastIndexOf('.');
-					if (extensionStart > 0)
+					if (!file.isHidden() && !file.isDirectory())
 					{
-						String fileExtension = filePath.substring(extensionStart);
+						String filePath = file.getPath();
 
-						// Check that the file has an extension we care about before trying to read out of it.
-						if (allowedExtensions.contains(fileExtension))
+						int extensionStart = filePath.lastIndexOf('.');
+						if (extensionStart > 0)
 						{
-							ContentValues game = Game.asContentValues(NativeLibrary.GetPlatform(filePath),
-									NativeLibrary.GetTitle(filePath),
-									NativeLibrary.GetDescription(filePath).replace("\n", " "),
-									NativeLibrary.GetCountry(filePath),
-									filePath,
-									NativeLibrary.GetGameId(filePath),
-									NativeLibrary.GetCompany(filePath));
+							String fileExtension = filePath.substring(extensionStart);
 
-							// Try to update an existing game first.
-							int rowsMatched = database.update(TABLE_NAME_GAMES,    // Which table to update.
-									game,                                            // The values to fill the row with.
-									KEY_GAME_ID + " = ?",                            // The WHERE clause used to find the right row.
-									new String[]{game.getAsString(KEY_GAME_ID)});    // The ? in WHERE clause is replaced with this,
-							// which is provided as an array because there
-							// could potentially be more than one argument.
+							// Check that the file has an extension we care about before trying to read out of it.
+							if (allowedExtensions.contains(fileExtension.toLowerCase()))
+							{
+								String name = NativeLibrary.GetTitle(filePath);
 
-							// If update fails, insert a new game instead.
-							if (rowsMatched == 0)
-							{
-								Log.v("DolphinEmu", "Adding game: " + game.getAsString(KEY_GAME_TITLE));
-								database.insert(TABLE_NAME_GAMES, null, game);
-							}
-							else
-							{
-								Log.v("DolphinEmu", "Updated game: " + game.getAsString(KEY_GAME_TITLE));
+								// If the game's title field is empty, use the filename.
+								if (name.isEmpty())
+								{
+									name = filePath.substring(filePath.lastIndexOf("/") + 1);
+								}
+
+								String gameId = NativeLibrary.GetGameId(filePath);
+
+								// If the game's ID field is empty, use the filename without extension.
+								if (gameId.isEmpty())
+								{
+									gameId = filePath.substring(filePath.lastIndexOf("/") + 1, filePath.lastIndexOf("."));
+								}
+
+								// If the game's platform field is empty, file under Wiiware. // TODO Something less dum
+								int platform = NativeLibrary.GetPlatform(filePath);
+								if (platform == -1)
+								{
+									platform = Game.PLATFORM_WII_WARE;
+								}
+
+								ContentValues game = Game.asContentValues(platform,
+										name,
+										NativeLibrary.GetDescription(filePath).replace("\n", " "),
+										NativeLibrary.GetCountry(filePath),
+										filePath,
+										gameId,
+										NativeLibrary.GetCompany(filePath));
+
+								// Try to update an existing game first.
+								int rowsMatched = database.update(TABLE_NAME_GAMES,    // Which table to update.
+										game,                                            // The values to fill the row with.
+										KEY_GAME_ID + " = ?",                            // The WHERE clause used to find the right row.
+										new String[]{game.getAsString(KEY_GAME_ID)});    // The ? in WHERE clause is replaced with this,
+								// which is provided as an array because there
+								// could potentially be more than one argument.
+
+								// If update fails, insert a new game instead.
+								if (rowsMatched == 0)
+								{
+									Log.verbose("[GameDatabase] Adding game: " + game.getAsString(KEY_GAME_TITLE));
+									database.insert(TABLE_NAME_GAMES, null, game);
+								}
+								else
+								{
+									Log.verbose("[GameDatabase] Updated game: " + game.getAsString(KEY_GAME_TITLE));
+								}
 							}
 						}
 					}
 				}
 			}
+			// If the folder is empty because it no longer exists, remove it from the library.
+			else if (!folder.exists())
+			{
+				Log.error("[GameDatabase] Folder no longer exists. Removing from the library: " + folderPath);
+				database.delete(TABLE_NAME_FOLDERS,
+						KEY_DB_ID + " = ?",
+						new String[]{Long.toString(folderCursor.getLong(COLUMN_DB_ID))});
+			}
+			else
+			{
+				Log.error("[GameDatabase] Folder contains no games: " + folderPath);
+			}
 		}
 
-		cursor.close();
+		fileCursor.close();
+		folderCursor.close();
 		database.close();
+	}
+
+	public Observable<Cursor> getGamesForPlatform(final int platform)
+	{
+		return Observable.create(new Observable.OnSubscribe<Cursor>()
+		{
+			@Override
+			public void call(Subscriber<? super Cursor> subscriber)
+			{
+				Log.info("[GameDatabase] [GameDatabase] Reading games list...");
+
+				String whereClause = null;
+				String[] whereArgs = null;
+
+				// If -1 passed in, return all games. Else, return games for one platform only.
+				if (platform >= 0)
+				{
+					whereClause = KEY_GAME_PLATFORM + " = ?";
+					whereArgs = new String[]{Integer.toString(platform)};
+				}
+
+				SQLiteDatabase database = getReadableDatabase();
+
+				Cursor resultCursor = database.query(
+						TABLE_NAME_GAMES,
+						null,
+						whereClause,
+						whereArgs,
+						null,
+						null,
+						KEY_GAME_TITLE + " ASC"
+				);
+
+				// Pass the result cursor to the consumer.
+				subscriber.onNext(resultCursor);
+
+				// Tell the consumer we're done; it will unsubscribe implicitly.
+				subscriber.onCompleted();
+			}
+		});
 	}
 }

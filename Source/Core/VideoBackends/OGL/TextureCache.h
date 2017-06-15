@@ -6,54 +6,67 @@
 
 #include <map>
 
-#include "VideoBackends/OGL/GLUtil.h"
-#include "VideoCommon/BPStructs.h"
+#include "Common/CommonTypes.h"
+#include "Common/GL/GLUtil.h"
+
 #include "VideoCommon/TextureCacheBase.h"
 #include "VideoCommon/VideoCommon.h"
 
 namespace OGL
 {
-
-class TextureCache : public ::TextureCache
+class TextureCache : public TextureCacheBase
 {
 public:
-	TextureCache();
-	static void DisableStage(unsigned int stage);
-	static void SetStage();
+  TextureCache();
+  ~TextureCache();
+
+  static void DisableStage(unsigned int stage);
+  static void SetStage();
+
+  bool SupportsGPUTextureDecode(TextureFormat format, TlutFormat palette_format) override;
+  void DecodeTextureOnGPU(TCacheEntryBase* entry, u32 dst_level, const u8* data, size_t data_size,
+                          TextureFormat format, u32 width, u32 height, u32 aligned_width,
+                          u32 aligned_height, u32 row_stride, const u8* palette,
+                          TlutFormat palette_format) override;
 
 private:
-	struct TCacheEntry : TCacheEntryBase
-	{
-		GLuint texture;
-		GLuint framebuffer;
+  struct TCacheEntry : TCacheEntryBase
+  {
+    GLuint texture;
+    GLuint framebuffer;
 
-		//TexMode0 mode; // current filter and clamp modes that texture is set to
-		//TexMode1 mode1; // current filter and clamp modes that texture is set to
+    // TexMode0 mode; // current filter and clamp modes that texture is set to
+    // TexMode1 mode1; // current filter and clamp modes that texture is set to
 
-		TCacheEntry(const TCacheEntryConfig& config);
-		~TCacheEntry();
+    TCacheEntry(const TCacheEntryConfig& config);
+    ~TCacheEntry();
 
-		void Load(unsigned int width, unsigned int height,
-			unsigned int expanded_width, unsigned int level) override;
+    void CopyRectangleFromTexture(const TCacheEntryBase* source,
+                                  const MathUtil::Rectangle<int>& srcrect,
+                                  const MathUtil::Rectangle<int>& dstrect) override;
 
-		void FromRenderTarget(u32 dstAddr, unsigned int dstFormat,
-			PEControl::PixelFormat srcFormat, const EFBRectangle& srcRect,
-			bool isIntensity, bool scaleByHalf, unsigned int cbufid,
-			const float *colmat) override;
+    void Load(u32 level, u32 width, u32 height, u32 row_length, const u8* buffer,
+              size_t buffer_size) override;
 
-		void Bind(unsigned int stage) override;
-		bool Save(const std::string& filename, unsigned int level) override;
-	};
+    void FromRenderTarget(bool is_depth_copy, const EFBRectangle& srcRect, bool scaleByHalf,
+                          unsigned int cbufid, const float* colmat) override;
 
-	~TextureCache();
+    void Bind(unsigned int stage) override;
+    bool Save(const std::string& filename, unsigned int level) override;
+  };
 
-	TCacheEntryBase* CreateTexture(const TCacheEntryConfig& config) override;
-	void ConvertTexture(TCacheEntryBase* entry, TCacheEntryBase* unconverted, void* palette, TlutFormat format) override;
+  TCacheEntryBase* CreateTexture(const TCacheEntryConfig& config) override;
+  void ConvertTexture(TCacheEntryBase* entry, TCacheEntryBase* unconverted, void* palette,
+                      TlutFormat format) override;
 
-	void CompileShaders() override;
-	void DeleteShaders() override;
+  void CopyEFB(u8* dst, const EFBCopyFormat& format, u32 native_width, u32 bytes_per_row,
+               u32 num_blocks_y, u32 memory_stride, bool is_depth_copy,
+               const EFBRectangle& src_rect, bool scale_by_half) override;
+
+  bool CompileShaders() override;
+  void DeleteShaders() override;
 };
 
-bool SaveTexture(const std::string& filename, u32 textarget, u32 tex, int virtual_width, int virtual_height, unsigned int level);
-
+bool SaveTexture(const std::string& filename, u32 textarget, u32 tex, int virtual_width,
+                 int virtual_height, unsigned int level);
 }

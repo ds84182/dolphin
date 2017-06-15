@@ -9,51 +9,76 @@
 
 class DebugInterface;
 
+enum class MemoryDataType
+{
+  U8,
+  U16,
+  U32,
+  ASCII,
+  FloatingPoint
+};
+
+wxDECLARE_EVENT(DOLPHIN_EVT_MEMORY_VIEW_DATA_TYPE_CHANGED, wxCommandEvent);
+
 class CMemoryView : public wxControl
 {
 public:
-	CMemoryView(DebugInterface* debuginterface, wxWindow* parent);
+  CMemoryView(DebugInterface* debuginterface, wxWindow* parent);
 
-	u32 GetSelection() const { return selection ; }
-	int GetMemoryType() const { return memory; }
+  u32 GetSelection() const { return selection; }
+  int GetMemoryType() const { return memory; }
+  void Center(u32 addr)
+  {
+    curAddress = addr;
+    Refresh();
+  }
 
-	void Center(u32 addr)
-	{
-		curAddress = addr;
-		Refresh();
-	}
-	int dataType;   // u8,u16,u32
-	int curAddress; // Will be accessed by parent
+  void SetDataType(MemoryDataType data_type);
+  MemoryDataType GetDataType() const { return m_data_type; }
+  void SetMemCheckOptions(bool read, bool write, bool log)
+  {
+    memCheckRead = read;
+    memCheckWrite = write;
+    memCheckLog = log;
+  }
 
 private:
-	void OnPaint(wxPaintEvent& event);
-	void OnMouseDownL(wxMouseEvent& event);
-	void OnMouseMove(wxMouseEvent& event);
-	void OnMouseUpL(wxMouseEvent& event);
-	void OnMouseDownR(wxMouseEvent& event);
-	void OnScrollWheel(wxMouseEvent& event);
-	void OnPopupMenu(wxCommandEvent& event);
+  int YToAddress(int y);
+  bool IsHexMode() const
+  {
+    return m_data_type != MemoryDataType::ASCII && m_data_type != MemoryDataType::FloatingPoint;
+  }
 
-	int YToAddress(int y);
-	void OnResize(wxSizeEvent& event);
+  wxString ReadMemoryAsString(u32 address) const;
 
-	DebugInterface* debugger;
+  void OnPaint(wxPaintEvent& event);
+  void OnMouseDownL(wxMouseEvent& event);
+  void OnMouseMove(wxMouseEvent& event);
+  void OnMouseUpL(wxMouseEvent& event);
+  void OnMouseDownR(wxMouseEvent& event);
+  void OnScrollWheel(wxMouseEvent& event);
+  void OnPopupMenu(wxCommandEvent& event);
+  void OnResize(wxSizeEvent& event);
 
-	int align;
-	int rowHeight;
+  static constexpr int LEFT_COL_WIDTH = 16;
 
-	u32 selection;
-	u32 oldSelection;
-	bool selecting;
+  DebugInterface* debugger;
 
-	int memory;
+  unsigned int align;
+  int rowHeight;
+  int m_left_col_width;
 
-	enum EViewAsType
-	{
-		VIEWAS_ASCII = 0,
-		VIEWAS_FP,
-		VIEWAS_HEX,
-	};
+  u32 selection;
+  u32 oldSelection;
+  bool selecting;
 
-	EViewAsType viewAsType;
+  int memory;
+  int curAddress;
+
+  bool memCheckRead;
+  bool memCheckWrite;
+  bool memCheckLog;
+
+  MemoryDataType m_data_type;
+  MemoryDataType m_last_hex_type = MemoryDataType::U8;
 };

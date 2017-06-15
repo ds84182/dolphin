@@ -6,6 +6,4 @@
 
 class PointerWrap;
 
-void VideoCommon_DoState(PointerWrap &p);
-void VideoCommon_RunLoop(bool enable);
-void VideoCommon_Init();
+void VideoCommon_DoState(PointerWrap& p);

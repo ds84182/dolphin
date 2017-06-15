@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Base">
       <UniqueIdentifier>{23908fac-d3fd-4fa5-a9b4-87b3bafc7bd9}</UniqueIdentifier>
@@ -42,6 +42,9 @@
       <Filter>Base</Filter>
     </ClCompile>
     <ClCompile Include="RenderBase.cpp">
+      <Filter>Base</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderState.cpp">
       <Filter>Base</Filter>
     </ClCompile>
     <ClCompile Include="TextureCacheBase.cpp">
@@ -158,6 +161,12 @@
     <ClCompile Include="GeometryShaderManager.cpp">
       <Filter>Shader Managers</Filter>
     </ClCompile>
+    <ClCompile Include="LightingShaderGen.cpp">
+      <Filter>Shader Generators</Filter>
+    </ClCompile>
+    <ClCompile Include="HiresTextures_DDSLoader.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommandProcessor.h" />
@@ -173,13 +182,13 @@
     <ClInclude Include="FramebufferManagerBase.h">
       <Filter>Base</Filter>
     </ClInclude>
-    <ClInclude Include="MainBase.h">
-      <Filter>Base</Filter>
-    </ClInclude>
     <ClInclude Include="PerfQueryBase.h">
       <Filter>Base</Filter>
     </ClInclude>
     <ClInclude Include="RenderBase.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderState.h">
       <Filter>Base</Filter>
     </ClInclude>
     <ClInclude Include="TextureCacheBase.h">
@@ -304,6 +313,9 @@
     </ClInclude>
     <ClInclude Include="GeometryShaderManager.h">
       <Filter>Shader Managers</Filter>
+    </ClInclude>
+    <ClInclude Include="SamplerCommon.h">
+      <Filter>Util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

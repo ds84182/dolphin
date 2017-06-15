@@ -4,11 +4,10 @@
 
 #pragma once
 
-#include "Common/CommonTypes.h"
-
 namespace EfbCopy
 {
-	// Copy the EFB to RAM as a texture format or XFB
-	// Clear the EFB if needed
-	void CopyEfb();
+// Copy the EFB to RAM as a texture format or XFB
+void CopyEfb();
+
+void ClearEfb();
 }

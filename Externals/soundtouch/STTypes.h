@@ -8,10 +8,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2013-06-12 15:24:44 +0000 (Wed, 12 Jun 2013) $
+// Last changed  : $Date: 2015-05-18 18:25:07 +0300 (Mon, 18 May 2015) $
 // File revision : $Revision: 3 $
 //
-// $Id: STTypes.h 171 2013-06-12 15:24:44Z oparviai $
+// $Id: STTypes.h 215 2015-05-18 15:25:07Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -60,16 +60,6 @@ typedef unsigned long   ulong;
     //#include "soundtouch_config.h"
 #endif
 
-#ifndef _WINDEF_
-    // if these aren't defined already by Windows headers, define now
-
-    typedef int BOOL;
-
-    #define FALSE   0
-    #define TRUE    1
-
-#endif  // _WINDEF_
-
 
 namespace soundtouch
 {
@@ -108,8 +98,8 @@ namespace soundtouch
         ///   However, if you still prefer to select the sample format here 
         ///   also in GNU environment, then please #undef the INTEGER_SAMPLE
         ///   and FLOAT_SAMPLE defines first as in comments above.
-        //#define SOUNDTOUCH_INTEGER_SAMPLES     1    //< 16bit integer samples
-        #define SOUNDTOUCH_FLOAT_SAMPLES       1    //< 32bit float samples
+        #define SOUNDTOUCH_INTEGER_SAMPLES     1    //< 16bit integer samples
+        //#define SOUNDTOUCH_FLOAT_SAMPLES       1    //< 32bit float samples
      
     #endif
 
@@ -120,7 +110,7 @@ namespace soundtouch
         /// routines compiled for whatever reason, you may disable these optimizations 
         /// to make the library compile.
 
-        #define SOUNDTOUCH_ALLOW_X86_OPTIMIZATIONS     1
+        //#define SOUNDTOUCH_ALLOW_X86_OPTIMIZATIONS     1
 
         /// In GNU environment, allow the user to override this setting by
         /// giving the following switch to the configure script:
@@ -182,6 +172,7 @@ namespace soundtouch
 #else
     // use c++ standard exceptions
     #include <stdexcept>
+    #include <string>
     #define ST_THROW_RT_ERROR(x)    {throw std::runtime_error(x);}
 #endif
 

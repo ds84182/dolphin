@@ -2,7 +2,6 @@
 // Licensed under GPLv2+
 // Refer to the license.txt file included.
 
-
 // Copyright 2014 Tony Wasserka
 // All rights reserved.
 //
@@ -29,7 +28,6 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 
 #pragma once
 
@@ -111,88 +109,72 @@
  * symptoms.
  */
 #pragma pack(1)
-template<std::size_t position, std::size_t bits, typename T>
+template <std::size_t position, std::size_t bits, typename T>
 struct BitField
 {
 private:
-#ifndef _WIN32
-	// This constructor might be considered ambiguous:
-	// Would it initialize the storage or just the bitfield?
-	// Hence, delete it. Use the assignment operator to set bitfield values!
-	// MSVC 2013 Intellisense complains that this declaration isn't allowed
-	// in a union member, so disable it on Windows.
-	BitField(T val) = delete;
-#endif
+  // This constructor might be considered ambiguous:
+  // Would it initialize the storage or just the bitfield?
+  // Hence, delete it. Use the assignment operator to set bitfield values!
+  BitField(T val) = delete;
 
 public:
-	// Force default constructor to be created
-	// so that we can use this within unions
-	BitField() = default;
+  // Force default constructor to be created
+  // so that we can use this within unions
+  constexpr BitField() = default;
 
-#ifndef _WIN32
-	// We explicitly delete the copy assignment operator here, because the
-	// default copy assignment would copy the full storage value, rather than
-	// just the bits relevant to this particular bit field.
-	// Ideally, we would just implement the copy assignment to copy only the
-	// relevant bits, but this requires compiler support for unrestricted
-	// unions.
-	// MSVC 2013 has no support for this, hence we disable this code on
-	// Windows (so that the default copy assignment operator will be used).
-	// For any C++11 conformant compiler we delete the operator to make sure
-	// we never use this inappropriate operator to begin with.
-	// TODO: Implement this operator properly once all target compilers
-	// support unrestricted unions.
-	BitField& operator=(const BitField&) = delete;
-#endif
+  // We explicitly delete the copy assignment operator here, because the
+  // default copy assignment would copy the full storage value, rather than
+  // just the bits relevant to this particular bit field.
+  // Ideally, we would just implement the copy assignment to copy only the
+  // relevant bits, but this requires compiler support for unrestricted
+  // unions.
+  // TODO: Implement this operator properly once all target compilers
+  // support unrestricted unions.
+  BitField& operator=(const BitField&) = delete;
 
-	__forceinline BitField& operator=(T val)
-	{
-		storage = (storage & ~GetMask()) | ((val << position) & GetMask());
-		return *this;
-	}
+  __forceinline BitField& operator=(T val)
+  {
+    storage = (storage & ~GetMask()) | ((val << position) & GetMask());
+    return *this;
+  }
 
-	__forceinline T Value() const
-	{
-		if (std::numeric_limits<T>::is_signed)
-		{
-			std::size_t shift = 8 * sizeof(T) - bits;
-			return (T)(((storage & GetMask()) << (shift - position)) >> shift);
-		}
-		else
-		{
-			return (T)((storage & GetMask()) >> position);
-		}
-	}
-
-	__forceinline operator T() const
-	{
-		return Value();
-	}
-
+  constexpr T Value() const { return Value(std::is_signed<T>()); }
+  constexpr operator T() const { return Value(); }
 private:
-	// StorageType is T for non-enum types and the underlying type of T if
-	// T is an enumeration. Note that T is wrapped within an enable_if in the
-	// former case to workaround compile errors which arise when using
-	// std::underlying_type<T>::type directly.
-	typedef typename std::conditional<std::is_enum<T>::value,
-	                                  std::underlying_type<T>,
-	                                  std::enable_if<true,T>>::type::type StorageType;
+  // StorageType is T for non-enum types and the underlying type of T if
+  // T is an enumeration. Note that T is wrapped within an enable_if in the
+  // former case to workaround compile errors which arise when using
+  // std::underlying_type<T>::type directly.
+  using StorageType = typename std::conditional_t<std::is_enum<T>::value, std::underlying_type<T>,
+                                                  std::enable_if<true, T>>::type;
 
-	// Unsigned version of StorageType
-	typedef typename std::make_unsigned<StorageType>::type StorageTypeU;
+  // Unsigned version of StorageType
+  using StorageTypeU = std::make_unsigned_t<StorageType>;
 
-	__forceinline StorageType GetMask() const
-	{
-		return ((~(StorageTypeU)0) >> (8 * sizeof(T) - bits)) << position;
-	}
+  constexpr T Value(std::true_type) const
+  {
+    using shift_amount = std::integral_constant<size_t, 8 * sizeof(T) - bits>;
+    return static_cast<T>((storage << (shift_amount() - position)) >> shift_amount());
+  }
 
-	StorageType storage;
+  constexpr T Value(std::false_type) const
+  {
+    return static_cast<T>((storage & GetMask()) >> position);
+  }
 
-	static_assert(bits + position <= 8 * sizeof(T), "Bitfield out of range");
+  static constexpr StorageType GetMask()
+  {
+    return (std::numeric_limits<StorageTypeU>::max() >> (8 * sizeof(T) - bits)) << position;
+  }
 
-	// And, you know, just in case people specify something stupid like bits=position=0x80000000
-	static_assert(position < 8 * sizeof(T), "Invalid position");
-	static_assert(bits <= 8 * sizeof(T), "Invalid number of bits");
-	static_assert(bits > 0, "Invalid number of bits");
+  StorageType storage;
+
+  static_assert(bits + position <= 8 * sizeof(T), "Bitfield out of range");
+
+  // And, you know, just in case people specify something stupid like bits=position=0x80000000
+  static_assert(position < 8 * sizeof(T), "Invalid position");
+  static_assert(bits <= 8 * sizeof(T), "Invalid number of bits");
+  static_assert(bits > 0, "Invalid number of bits");
 };
 #pragma pack()

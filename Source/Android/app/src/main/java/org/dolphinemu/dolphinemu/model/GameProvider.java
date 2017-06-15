@@ -5,9 +5,10 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
-import android.util.Log;
+import android.support.annotation.NonNull;
 
 import org.dolphinemu.dolphinemu.BuildConfig;
+import org.dolphinemu.dolphinemu.utils.Log;
 
 /**
  * Provides an interface allowing Activities to interact with the SQLite database.
@@ -15,19 +16,23 @@ import org.dolphinemu.dolphinemu.BuildConfig;
  */
 public final class GameProvider extends ContentProvider
 {
+	public static final String REFRESH_LIBRARY = "refresh";
+
 	public static final String AUTHORITY = "content://" + BuildConfig.APPLICATION_ID + ".provider";
 	public static final Uri URI_FOLDER = Uri.parse(AUTHORITY + "/" + GameDatabase.TABLE_NAME_FOLDERS + "/");
 	public static final Uri URI_GAME = Uri.parse(AUTHORITY + "/" + GameDatabase.TABLE_NAME_GAMES + "/");
+	public static final Uri URI_REFRESH = Uri.parse(AUTHORITY + "/" + REFRESH_LIBRARY + "/");
 
 	public static final String MIME_TYPE_FOLDER = "vnd.android.cursor.item/vnd.dolphin.folder";
 	public static final String MIME_TYPE_GAME = "vnd.android.cursor.item/vnd.dolphin.game";
+
 
 	private GameDatabase mDbHelper;
 
 	@Override
 	public boolean onCreate()
 	{
-		Log.i("DolphinEmu", "Creating Content Provider...");
+		Log.info("[GameProvider] Creating Content Provider...");
 
 		mDbHelper = new GameDatabase(getContext());
 
@@ -35,9 +40,9 @@ public final class GameProvider extends ContentProvider
 	}
 
 	@Override
-	public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder)
+	public Cursor query(@NonNull Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder)
 	{
-		Log.i("DolphinEmu", "Querying URI: " + uri);
+		Log.info("[GameProvider] Querying URI: " + uri);
 
 		SQLiteDatabase db = mDbHelper.getReadableDatabase();
 
@@ -45,7 +50,7 @@ public final class GameProvider extends ContentProvider
 
 		if (table == null)
 		{
-			Log.e("DolphinEmu", "Badly formatted URI: " + uri);
+			Log.error("[GameProvider] Badly formatted URI: " + uri);
 			return null;
 		}
 
@@ -56,14 +61,14 @@ public final class GameProvider extends ContentProvider
 	}
 
 	@Override
-	public String getType(Uri uri)
+	public String getType(@NonNull Uri uri)
 	{
-		Log.v("DolphinEmu", "Getting MIME type for URI: " + uri);
+		Log.verbose("[GameProvider] Getting MIME type for URI: " + uri);
 		String lastSegment = uri.getLastPathSegment();
 
 		if (lastSegment == null)
 		{
-			Log.e("DolphinEmu", "Badly formatted URI: " + uri);
+			Log.error("[GameProvider] Badly formatted URI: " + uri);
 			return null;
 		}
 
@@ -76,14 +81,14 @@ public final class GameProvider extends ContentProvider
 			return MIME_TYPE_GAME;
 		}
 
-		Log.e("DolphinEmu", "Unknown MIME type for URI: " + uri);
+		Log.error("[GameProvider] Unknown MIME type for URI: " + uri);
 		return null;
 	}
 
 	@Override
-	public Uri insert(Uri uri, ContentValues values)
+	public Uri insert(@NonNull Uri uri, ContentValues values)
 	{
-		Log.i("DolphinEmu", "Inserting row at URI: " + uri);
+		Log.info("[GameProvider] Inserting row at URI: " + uri);
 
 		SQLiteDatabase database = mDbHelper.getWritableDatabase();
 		String table = uri.getLastPathSegment();
@@ -92,6 +97,13 @@ public final class GameProvider extends ContentProvider
 
 		if (table != null)
 		{
+			if (table.equals(REFRESH_LIBRARY))
+			{
+				Log.info("[GameProvider] URI specified table REFRESH_LIBRARY. No insertion necessary; refreshing library contents...");
+				mDbHelper.scanLibrary(database);
+				return uri;
+			}
+
 			id = database.insertWithOnConflict(table, null, values, SQLiteDatabase.CONFLICT_IGNORE);
 
 			// If insertion was successful...
@@ -109,12 +121,12 @@ public final class GameProvider extends ContentProvider
 			}
 			else
 			{
-				Log.e("DolphinEmu", "Row already exists: " + uri + " id: " + id);
+				Log.error("[GameProvider] Row already exists: " + uri + " id: " + id);
 			}
 		}
 		else
 		{
-			Log.e("DolphinEmu", "Badly formatted URI: " + uri);
+			Log.error("[GameProvider] Badly formatted URI: " + uri);
 		}
 
 		database.close();
@@ -123,16 +135,16 @@ public final class GameProvider extends ContentProvider
 	}
 
 	@Override
-	public int delete(Uri uri, String selection, String[] selectionArgs)
+	public int delete(@NonNull Uri uri, String selection, String[] selectionArgs)
 	{
-		Log.e("DolphinEmu", "Delete operations unsupported. URI: " + uri);
+		Log.error("[GameProvider] Delete operations unsupported. URI: " + uri);
 		return 0;
 	}
 
 	@Override
-	public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs)
+	public int update(@NonNull Uri uri, ContentValues values, String selection, String[] selectionArgs)
 	{
-		Log.e("DolphinEmu", "Update operations unsupported. URI: " + uri);
+		Log.error("[GameProvider] Update operations unsupported. URI: " + uri);
 		return 0;
 	}
 }

@@ -9,19 +9,26 @@
 
 #include "Core/NetPlayProto.h"
 
+class NetPlayClient;
+class NetPlayServer;
 class Player;
+class wxArrayString;
 class wxChoice;
+class wxSizer;
 
 class PadMapDialog final : public wxDialog
 {
 public:
-	PadMapDialog(wxWindow* parent, PadMapping map[], PadMapping wiimotemap[], std::vector<const Player*>& player_list);
+  PadMapDialog(wxWindow* parent, NetPlayServer* server, NetPlayClient* client);
+
+  PadMappingArray GetModifiedPadMappings() const;
+  PadMappingArray GetModifiedWiimoteMappings() const;
 
 private:
-	void OnAdjust(wxCommandEvent& event);
+  void OnAdjust(wxCommandEvent& event);
 
-	wxChoice* m_map_cbox[8];
-	PadMapping* const m_mapping;
-	PadMapping* const m_wiimapping;
-	std::vector<const Player*>& m_player_list;
+  wxChoice* m_map_cbox[8];
+  PadMappingArray m_pad_mapping;
+  PadMappingArray m_wii_mapping;
+  std::vector<const Player*> m_player_list;
 };

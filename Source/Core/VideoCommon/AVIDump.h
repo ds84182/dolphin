@@ -4,33 +4,32 @@
 
 #pragma once
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <stdint.h>
-#endif
-
 #include "Common/CommonTypes.h"
 
 class AVIDump
 {
 private:
-	static bool CreateFile();
-	static void CloseFile();
-	static void SetBitmapFormat();
-	static bool SetCompressionOptions();
-	static bool SetVideoFormat();
-
-	static void StoreFrame(const void* data);
-	static void* GetFrame();
+  static bool CreateVideoFile();
+  static void CloseVideoFile();
+  static void CheckResolution(int width, int height);
 
 public:
-#ifdef _WIN32
-	static bool Start(HWND hWnd, int w, int h);
+  struct Frame
+  {
+    u64 ticks = 0;
+    u32 ticks_per_second = 0;
+    bool first_frame = false;
+    int savestate_index = 0;
+  };
+
+  static bool Start(int w, int h);
+  static void AddFrame(const u8* data, int width, int height, int stride, const Frame& state);
+  static void Stop();
+  static void DoState();
+
+#if defined(HAVE_FFMPEG)
+  static Frame FetchState(u64 ticks);
 #else
-	static bool Start(int w, int h);
+  static Frame FetchState(u64 ticks) { return {}; }
 #endif
-	static void AddFrame(const u8* data, int width, int height);
-	static void Stop();
-	static void DoState();
 };

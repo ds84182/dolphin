@@ -4,39 +4,41 @@
 
 #pragma once
 
-#include "InputCommon/ControllerEmu.h"
+#include <array>
+#include <string>
+#include "Common/CommonTypes.h"
+#include "InputCommon/ControllerEmu/ControllerEmu.h"
 
 namespace WiimoteEmu
 {
-
 struct ExtensionReg;
 
-class Attachment : public ControllerEmu
+class Attachment : public ControllerEmu::EmulatedController
 {
 public:
-	Attachment(const char* const _name, WiimoteEmu::ExtensionReg& _reg);
+  Attachment(const char* const name, ExtensionReg& reg);
 
-	virtual void GetState(u8* const data) {}
-	void Reset();
-	std::string GetName() const override;
+  virtual void GetState(u8* const data);
+  virtual bool IsButtonPressed() const;
 
-	const char* const         name;
-	WiimoteEmu::ExtensionReg& reg;
-
-	u8 id[6];
-	u8 calibration[0x10];
+  void Reset();
+  std::string GetName() const override;
 
 protected:
-	// TODO: Make constexpr when VS supports it.
-	//
-	// Default radius for attachment analog sticks.
-	static const ControlState DEFAULT_ATTACHMENT_STICK_RADIUS;
+  // Default radius for attachment analog sticks.
+  static constexpr ControlState DEFAULT_ATTACHMENT_STICK_RADIUS = 1.0;
+
+  std::array<u8, 6> m_id{};
+  std::array<u8, 0x10> m_calibration{};
+
+private:
+  const char* const m_name;
+  ExtensionReg& m_reg;
 };
 
 class None : public Attachment
 {
 public:
-	None(WiimoteEmu::ExtensionReg& _reg);
+  explicit None(ExtensionReg& reg);
 };
-
-}
+}  // namespace WiimoteEmu

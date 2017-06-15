@@ -3,142 +3,165 @@
 // Refer to the license.txt file included.
 
 #include <cstddef>
+#include <cstring>
+#include <locale>
 #include <map>
+#include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "Common/Align.h"
+#include "Common/Assert.h"
 #include "Common/CommonTypes.h"
-#include "Common/MathUtil.h"
+#include "Common/Logging/Log.h"
+#include "Common/MsgHandler.h"
 #include "Common/StringUtil.h"
 #include "DiscIO/Blob.h"
+#include "DiscIO/Enums.h"
 #include "DiscIO/Volume.h"
 #include "DiscIO/VolumeWad.h"
 
-#define ALIGN_40(x) ROUND_UP(Common::swap32(x), 0x40)
-
 namespace DiscIO
 {
-CVolumeWAD::CVolumeWAD(IBlobReader* _pReader)
-	: m_pReader(_pReader), m_offset(0), m_tmd_offset(0), m_opening_bnr_offset(0),
-	m_hdr_size(0), m_cert_size(0), m_tick_size(0), m_tmd_size(0), m_data_size(0)
+VolumeWAD::VolumeWAD(std::unique_ptr<BlobReader> reader) : m_reader(std::move(reader))
 {
-	// Source: http://wiibrew.org/wiki/WAD_files
-	Read(0x00, 4, (u8*)&m_hdr_size);
-	Read(0x08, 4, (u8*)&m_cert_size);
-	Read(0x10, 4, (u8*)&m_tick_size);
-	Read(0x14, 4, (u8*)&m_tmd_size);
-	Read(0x18, 4, (u8*)&m_data_size);
+  _assert_(m_reader);
 
-	m_offset = ALIGN_40(m_hdr_size) + ALIGN_40(m_cert_size);
-	m_tmd_offset = ALIGN_40(m_hdr_size) + ALIGN_40(m_cert_size) + ALIGN_40(m_tick_size);
-	m_opening_bnr_offset = m_tmd_offset + ALIGN_40(m_tmd_size) + ALIGN_40(m_data_size);
+  // Source: http://wiibrew.org/wiki/WAD_files
+  m_hdr_size = m_reader->ReadSwapped<u32>(0x00).value_or(0);
+  m_cert_size = m_reader->ReadSwapped<u32>(0x08).value_or(0);
+  m_tick_size = m_reader->ReadSwapped<u32>(0x10).value_or(0);
+  m_tmd_size = m_reader->ReadSwapped<u32>(0x14).value_or(0);
+  m_data_size = m_reader->ReadSwapped<u32>(0x18).value_or(0);
+
+  m_offset = Common::AlignUp(m_hdr_size, 0x40) + Common::AlignUp(m_cert_size, 0x40);
+  m_tmd_offset = Common::AlignUp(m_hdr_size, 0x40) + Common::AlignUp(m_cert_size, 0x40) +
+                 Common::AlignUp(m_tick_size, 0x40);
+  m_opening_bnr_offset =
+      m_tmd_offset + Common::AlignUp(m_tmd_size, 0x40) + Common::AlignUp(m_data_size, 0x40);
+
+  if (!IOS::ES::IsValidTMDSize(m_tmd_size))
+  {
+    ERROR_LOG(DISCIO, "TMD is too large: %u bytes", m_tmd_size);
+    return;
+  }
+
+  std::vector<u8> tmd_buffer(m_tmd_size);
+  Read(m_tmd_offset, m_tmd_size, tmd_buffer.data());
+  m_tmd.SetBytes(std::move(tmd_buffer));
 }
 
-CVolumeWAD::~CVolumeWAD()
+VolumeWAD::~VolumeWAD()
 {
 }
 
-bool CVolumeWAD::Read(u64 _Offset, u64 _Length, u8* _pBuffer, bool decrypt) const
+bool VolumeWAD::Read(u64 offset, u64 length, u8* buffer, const Partition& partition) const
 {
-	if (decrypt)
-		PanicAlertT("Tried to decrypt data from a non-Wii volume");
+  if (partition != PARTITION_NONE)
+    return false;
 
-	if (m_pReader == nullptr)
-		return false;
-
-	return m_pReader->Read(_Offset, _Length, _pBuffer);
+  return m_reader->Read(offset, length, buffer);
 }
 
-IVolume::ECountry CVolumeWAD::GetCountry() const
+Region VolumeWAD::GetRegion() const
 {
-	if (!m_pReader)
-		return COUNTRY_UNKNOWN;
-
-	// read the last digit of the titleID in the ticket
-	u8 country_code;
-	Read(m_tmd_offset + 0x0193, 1, &country_code);
-
-	if (country_code == 2) // SYSMENU
-	{
-		u16 title_version = 0;
-		Read(m_tmd_offset + 0x01dc, 2, (u8*)&title_version);
-		country_code = GetSysMenuRegion(Common::swap16(title_version));
-	}
-
-	return CountrySwitch(country_code);
+  if (!m_tmd.IsValid())
+    return Region::UNKNOWN_REGION;
+  return m_tmd.GetRegion();
 }
 
-std::string CVolumeWAD::GetUniqueID() const
+Country VolumeWAD::GetCountry(const Partition& partition) const
 {
-	std::string temp = GetMakerID();
+  if (!m_tmd.IsValid())
+    return Country::COUNTRY_UNKNOWN;
 
-	char GameCode[8];
-	if (!Read(m_offset + 0x01E0, 4, (u8*)GameCode))
-		return "0";
+  u8 country_code = static_cast<u8>(m_tmd.GetTitleId() & 0xff);
+  if (country_code == 2)  // SYSMENU
+    return TypicalCountryForRegion(GetSysMenuRegion(m_tmd.GetTitleVersion()));
 
-	GameCode[4] = temp.at(0);
-	GameCode[5] = temp.at(1);
-	GameCode[6] = 0;
-
-	return GameCode;
+  return CountrySwitch(country_code);
 }
 
-std::string CVolumeWAD::GetMakerID() const
+const IOS::ES::TMDReader& VolumeWAD::GetTMD(const Partition& partition) const
 {
-	char temp[3] = {1};
-	// Some weird channels use 0x0000 in place of the MakerID, so we need a check there
-	if (!Read(0x198 + m_tmd_offset, 2, (u8*)temp) || temp[0] == 0 || temp[1] == 0)
-		return "00";
-
-	temp[2] = 0;
-
-	return temp;
+  return m_tmd;
 }
 
-bool CVolumeWAD::GetTitleID(u8* _pBuffer) const
+std::string VolumeWAD::GetGameID(const Partition& partition) const
 {
-	if (!Read(m_offset + 0x01DC, 8, _pBuffer))
-		return false;
-
-	return true;
+  return m_tmd.GetGameID();
 }
 
-int CVolumeWAD::GetRevision() const
+std::string VolumeWAD::GetMakerID(const Partition& partition) const
 {
-	u16 revision;
-	if (!m_pReader->Read(m_tmd_offset + 0x1dc, 2, (u8*)&revision))
-		return 0;
+  char temp[2];
+  if (!Read(0x198 + m_tmd_offset, 2, (u8*)temp, partition))
+    return "00";
 
-	return Common::swap16(revision);
+  // Some weird channels use 0x0000 in place of the MakerID, so we need a check here
+  const std::locale& c_locale = std::locale::classic();
+  if (!std::isprint(temp[0], c_locale) || !std::isprint(temp[1], c_locale))
+    return "00";
+
+  return DecodeString(temp);
 }
 
-bool CVolumeWAD::IsWadFile() const
+std::optional<u64> VolumeWAD::GetTitleID(const Partition& partition) const
 {
-	return true;
+  return ReadSwapped<u64>(m_offset + 0x01DC, partition);
 }
 
-std::map<IVolume::ELanguage, std::string> CVolumeWAD::GetNames() const
+std::optional<u16> VolumeWAD::GetRevision(const Partition& partition) const
 {
-	std::vector<u8> name_data(NAMES_TOTAL_BYTES);
-	if (!Read(m_opening_bnr_offset + 0x9C, NAMES_TOTAL_BYTES, name_data.data()))
-		return std::map<IVolume::ELanguage, std::string>();
-	return ReadWiiNames(name_data);
+  if (!m_tmd.IsValid())
+    return {};
+
+  return m_tmd.GetTitleVersion();
 }
 
-u64 CVolumeWAD::GetSize() const
+Platform VolumeWAD::GetVolumeType() const
 {
-	if (m_pReader)
-		return m_pReader->GetDataSize();
-	else
-		return 0;
+  return Platform::WII_WAD;
 }
 
-u64 CVolumeWAD::GetRawSize() const
+std::map<Language, std::string> VolumeWAD::GetLongNames() const
 {
-	if (m_pReader)
-		return m_pReader->GetRawSize();
-	else
-		return 0;
+  if (!m_tmd.IsValid() || !IOS::ES::IsChannel(m_tmd.GetTitleId()))
+    return {};
+
+  std::vector<u8> name_data(NAMES_TOTAL_BYTES);
+  if (!Read(m_opening_bnr_offset + 0x9C, NAMES_TOTAL_BYTES, name_data.data()))
+    return std::map<Language, std::string>();
+  return ReadWiiNames(name_data);
 }
 
-} // namespace
+std::vector<u32> VolumeWAD::GetBanner(int* width, int* height) const
+{
+  *width = 0;
+  *height = 0;
+
+  const std::optional<u64> title_id = GetTitleID();
+  if (!title_id)
+    return std::vector<u32>();
+
+  return GetWiiBanner(width, height, *title_id);
+}
+
+BlobType VolumeWAD::GetBlobType() const
+{
+  return m_reader->GetBlobType();
+}
+
+u64 VolumeWAD::GetSize() const
+{
+  return m_reader->GetDataSize();
+}
+
+u64 VolumeWAD::GetRawSize() const
+{
+  return m_reader->GetRawSize();
+}
+
+}  // namespace

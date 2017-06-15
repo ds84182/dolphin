@@ -1,11 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="DiscScrubber">
       <UniqueIdentifier>{3873659a-9a30-4a58-af9e-8dad7d7eb627}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="FileHandler">
-      <UniqueIdentifier>{324d4b72-d25b-4c83-bd61-6c9e85e59895}</UniqueIdentifier>
     </Filter>
     <Filter Include="FileSystem">
       <UniqueIdentifier>{bd7dbc22-b233-4f82-a369-034f04133b73}</UniqueIdentifier>
@@ -36,6 +33,9 @@
     <ClCompile Include="NANDContentLoader.cpp">
       <Filter>NAND</Filter>
     </ClCompile>
+    <ClCompile Include="NANDImporter.cpp">
+      <Filter>NAND</Filter>
+    </ClCompile>
     <ClCompile Include="Blob.cpp">
       <Filter>Volume\Blob</Filter>
     </ClCompile>
@@ -54,15 +54,6 @@
     <ClCompile Include="WbfsBlob.cpp">
       <Filter>Volume\Blob</Filter>
     </ClCompile>
-    <ClCompile Include="FileMonitor.cpp">
-      <Filter>Volume</Filter>
-    </ClCompile>
-    <ClCompile Include="VolumeCommon.cpp">
-      <Filter>Volume</Filter>
-    </ClCompile>
-    <ClCompile Include="VolumeCreator.cpp">
-      <Filter>Volume</Filter>
-    </ClCompile>
     <ClCompile Include="VolumeDirectory.cpp">
       <Filter>Volume</Filter>
     </ClCompile>
@@ -72,8 +63,17 @@
     <ClCompile Include="VolumeWad.cpp">
       <Filter>Volume</Filter>
     </ClCompile>
-    <ClCompile Include="VolumeWiiCrypted.cpp">
+    <ClCompile Include="Enums.cpp">
       <Filter>Volume</Filter>
+    </ClCompile>
+    <ClCompile Include="VolumeWii.cpp">
+      <Filter>Volume</Filter>
+    </ClCompile>
+    <ClCompile Include="Volume.cpp">
+      <Filter>Volume</Filter>
+    </ClCompile>
+    <ClCompile Include="TGCBlob.cpp">
+      <Filter>Volume\Blob</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -90,6 +90,9 @@
       <Filter>NAND</Filter>
     </ClInclude>
     <ClInclude Include="NANDContentLoader.h">
+      <Filter>NAND</Filter>
+    </ClInclude>
+    <ClInclude Include="NANDImporter.h">
       <Filter>NAND</Filter>
     </ClInclude>
     <ClInclude Include="Blob.h">
@@ -110,13 +113,7 @@
     <ClInclude Include="WbfsBlob.h">
       <Filter>Volume\Blob</Filter>
     </ClInclude>
-    <ClInclude Include="FileMonitor.h">
-      <Filter>Volume</Filter>
-    </ClInclude>
     <ClInclude Include="Volume.h">
-      <Filter>Volume</Filter>
-    </ClInclude>
-    <ClInclude Include="VolumeCreator.h">
       <Filter>Volume</Filter>
     </ClInclude>
     <ClInclude Include="VolumeDirectory.h">
@@ -128,8 +125,14 @@
     <ClInclude Include="VolumeWad.h">
       <Filter>Volume</Filter>
     </ClInclude>
-    <ClInclude Include="VolumeWiiCrypted.h">
+    <ClInclude Include="VolumeWii.h">
       <Filter>Volume</Filter>
+    </ClInclude>
+    <ClInclude Include="Enums.h">
+      <Filter>Volume</Filter>
+    </ClInclude>
+    <ClInclude Include="TGCBlob.h">
+      <Filter>Volume\Blob</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

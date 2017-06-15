@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <array>
+#include <memory>
 #include <string>
 #include <wx/dialog.h>
 #include <wx/listctrl.h>
@@ -17,136 +19,120 @@ class wxFileDirPickerEvent;
 class wxFilePickerCtrl;
 class wxStaticText;
 
-#undef MEMCARD_MANAGER_STYLE
-#define MEMCARD_MANAGER_STYLE wxCAPTION | wxSYSTEM_MENU | wxDIALOG_NO_PARENT | wxCLOSE_BOX | wxRESIZE_BORDER | wxMAXIMIZE_BOX
-#define MEMCARDMAN_TITLE _trans("Memory Card Manager WARNING-Make backups before using, should be fixed but could mangle stuff!")
-
-#define E_SAVEFAILED "File write failed"
-#define E_UNK "Unknown error"
-#define FIRSTPAGE 0
-
-class CMemcardManager : public wxDialog
+class CMemcardManager final : public wxDialog
 {
-	public:
+public:
+  CMemcardManager(wxWindow* parent);
+  ~CMemcardManager();
 
-		CMemcardManager(wxWindow *parent, wxWindowID id = wxID_ANY, const wxString& title = wxGetTranslation(MEMCARDMAN_TITLE),
-			const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = MEMCARD_MANAGER_STYLE);
-		virtual ~CMemcardManager();
+private:
+  DECLARE_EVENT_TABLE();
 
-	private:
-		DECLARE_EVENT_TABLE();
+  std::array<int, 2> page;
+  int itemsPerPage;
+  int maxPages;
+  std::array<std::string, 2> DefaultMemcard;
+  std::string DefaultIOPath;
+  IniFile MemcardManagerIni;
+  IniFile::Section* iniMemcardSection;
 
-		int page[2];
-		int itemsPerPage;
-		int maxPages;
-		std::string DefaultMemcard[2];
-		std::string DefaultIOPath;
-		IniFile MemcardManagerIni;
-		IniFile::Section* iniMemcardSection;
+  std::array<wxButton*, 2> m_CopyFrom;
+  std::array<wxButton*, 2> m_SaveImport;
+  std::array<wxButton*, 2> m_SaveExport;
+  std::array<wxButton*, 2> m_Delete;
+  std::array<wxButton*, 2> m_NextPage;
+  std::array<wxButton*, 2> m_PrevPage;
+  wxButton* m_ConvertToGci;
+  std::array<wxFilePickerCtrl*, 2> m_MemcardPath;
+  std::array<wxStaticText*, 2> t_Status;
 
-		wxButton* m_CopyFrom[2];
-		wxButton* m_SaveImport[2];
-		wxButton* m_SaveExport[2];
-		wxButton* m_Delete[2];
-		wxButton* m_NextPage[2];
-		wxButton* m_PrevPage[2];
-		wxButton* m_ConvertToGci;
-		wxFilePickerCtrl *m_MemcardPath[2];
-		wxStaticText *t_Status[2];
+  enum
+  {
+    ID_COPYFROM_A = 1000,  // Do not rearrange these items,
+    ID_COPYFROM_B,         // ID_..._B must be 1 more than ID_..._A
+    ID_FIXCHECKSUM_A,
+    ID_FIXCHECKSUM_B,
+    ID_DELETE_A,
+    ID_DELETE_B,
+    ID_SAVEEXPORT_A,
+    ID_SAVEEXPORT_B,
+    ID_SAVEIMPORT_A,
+    ID_SAVEIMPORT_B,
+    ID_EXPORTALL_A,
+    ID_EXPORTALL_B,
+    ID_CONVERTTOGCI,
+    ID_NEXTPAGE_A,
+    ID_NEXTPAGE_B,
+    ID_PREVPAGE_A,
+    ID_PREVPAGE_B,
+    ID_MEMCARDLIST_A,
+    ID_MEMCARDLIST_B,
+    ID_MEMCARDPATH_A,
+    ID_MEMCARDPATH_B,
+    ID_USEPAGES,
+    ID_DUMMY_VALUE_  // don't remove this value unless you have other enum values
+  };
 
-		enum
-		{
-			ID_COPYFROM_A = 1000, // Do not rearrange these items,
-			ID_COPYFROM_B,        // ID_..._B must be 1 more than ID_..._A
-			ID_FIXCHECKSUM_A,
-			ID_FIXCHECKSUM_B,
-			ID_DELETE_A,
-			ID_DELETE_B,
-			ID_SAVEEXPORT_A,
-			ID_SAVEEXPORT_B,
-			ID_SAVEIMPORT_A,
-			ID_SAVEIMPORT_B,
-			ID_EXPORTALL_A,
-			ID_EXPORTALL_B,
-			ID_CONVERTTOGCI,
-			ID_NEXTPAGE_A,
-			ID_NEXTPAGE_B,
-			ID_PREVPAGE_A,
-			ID_PREVPAGE_B,
-			ID_MEMCARDLIST_A,
-			ID_MEMCARDLIST_B,
-			ID_MEMCARDPATH_A,
-			ID_MEMCARDPATH_B,
-			ID_USEPAGES,
-			ID_DUMMY_VALUE_ //don't remove this value unless you have other enum values
-		};
+  enum
+  {
+    COLUMN_BANNER = 0,
+    COLUMN_TITLE,
+    COLUMN_COMMENT,
+    COLUMN_ICON,
+    COLUMN_BLOCKS,
+    COLUMN_FIRSTBLOCK,
+    COLUMN_GAMECODE,
+    COLUMN_MAKERCODE,
+    COLUMN_FILENAME,
+    COLUMN_BIFLAGS,
+    COLUMN_MODTIME,
+    COLUMN_IMAGEADD,
+    COLUMN_ICONFMT,
+    COLUMN_ANIMSPEED,
+    COLUMN_PERMISSIONS,
+    COLUMN_COPYCOUNTER,
+    COLUMN_COMMENTSADDRESS,
+    NUMBER_OF_COLUMN
+  };
 
-		enum
-		{
-			COLUMN_BANNER = 0,
-			COLUMN_TITLE,
-			COLUMN_COMMENT,
-			COLUMN_ICON,
-			COLUMN_BLOCKS,
-			COLUMN_FIRSTBLOCK,
-			COLUMN_GAMECODE,
-			COLUMN_MAKERCODE,
-			COLUMN_FILENAME,
-			COLUMN_BIFLAGS,
-			COLUMN_MODTIME,
-			COLUMN_IMAGEADD,
-			COLUMN_ICONFMT,
-			COLUMN_ANIMSPEED,
-			COLUMN_PERMISSIONS,
-			COLUMN_COPYCOUNTER,
-			COLUMN_COMMENTSADDRESS,
-			NUMBER_OF_COLUMN
-		};
+  std::array<std::unique_ptr<GCMemcard>, 2> memoryCard;
 
-		GCMemcard *memoryCard[2];
+  void CreateGUIControls();
+  void CopyDeleteClick(wxCommandEvent& event);
+  bool ReloadMemcard(const std::string& fileName, int card);
+  void OnMenuChange(wxCommandEvent& event);
+  void OnPageChange(wxCommandEvent& event);
+  void OnPathChange(wxFileDirPickerEvent& event);
+  void ChangePath(int id);
+  bool CopyDeleteSwitch(u32 error, int slot);
+  bool LoadSettings();
+  bool SaveSettings();
 
-		void CreateGUIControls();
-		void CopyDeleteClick(wxCommandEvent& event);
-		bool ReloadMemcard(const std::string& fileName, int card);
-		void OnMenuChange(wxCommandEvent& event);
-		void OnPageChange(wxCommandEvent& event);
-		void OnPathChange(wxFileDirPickerEvent& event);
-		void ChangePath(int id);
-		bool CopyDeleteSwitch(u32 error, int slot);
-		bool LoadSettings();
-		bool SaveSettings();
+  struct ManagerSettings
+  {
+    bool twoCardsLoaded;
+    bool usePages;
+    std::array<bool, NUMBER_OF_COLUMN + 1> column;
+  } mcmSettings;
 
-		struct _mcmSettings
-		{
-			bool twoCardsLoaded;
-			bool usePages;
-			bool column[NUMBER_OF_COLUMN + 1];
-		} mcmSettings;
+  class CMemcardListCtrl : public wxListCtrl
+  {
+  public:
+    CMemcardListCtrl(wxWindow* parent, const wxWindowID id, const wxPoint& pos, const wxSize& size,
+                     long style, ManagerSettings& manager_settings)
+        : wxListCtrl(parent, id, pos, size, style), mgr_settings(manager_settings)
+    {
+      Bind(wxEVT_RIGHT_DOWN, &CMemcardListCtrl::OnRightClick, this);
+    }
+    ~CMemcardListCtrl() { Unbind(wxEVT_RIGHT_DOWN, &CMemcardListCtrl::OnRightClick, this); }
+    ManagerSettings& mgr_settings;
+    bool prevPage;
+    bool nextPage;
 
-		class CMemcardListCtrl : public wxListCtrl
-		{
-//BEGIN_EVENT_TABLE(CMemcardManager::CMemcardListCtrl, wxListCtrl)
-//      EVT_RIGHT_DOWN(CMemcardManager::CMemcardListCtrl::OnRightClick)
-//END_EVENT_TABLE()
-		public:
-			CMemcardListCtrl(wxWindow* parent, const wxWindowID id,
-				const wxPoint& pos, const wxSize& size,
-				long style, _mcmSettings& _mcmSetngs)
-				: wxListCtrl(parent, id, pos, size, style)
-				, __mcmSettings(_mcmSetngs)
-			{
-				Bind(wxEVT_RIGHT_DOWN, &CMemcardListCtrl::OnRightClick, this);
-			}
-			~CMemcardListCtrl()
-			{
-				Unbind(wxEVT_RIGHT_DOWN, &CMemcardListCtrl::OnRightClick, this);
-			}
-			_mcmSettings & __mcmSettings;
-			bool prevPage;
-			bool nextPage;
-		private:
-			void OnRightClick(wxMouseEvent& event);
-		};
+  private:
+    void OnRightClick(wxMouseEvent& event);
+  };
 
-		CMemcardListCtrl *m_MemcardList[2];
+  wxSize m_image_list_size;
+  std::array<CMemcardListCtrl*, 2> m_MemcardList;
 };

@@ -6,11 +6,11 @@
 
 namespace UICommon
 {
-
 void Init();
 void Shutdown();
 
 void CreateDirectories();
 void SetUserDirectory(const std::string& custom_path);
 
-} // namespace UICommon
+void SaveWiimoteSources();
+}  // namespace UICommon

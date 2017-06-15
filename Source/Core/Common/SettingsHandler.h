@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <array>
 #include <string>
 
 #include "Common/CommonTypes.h"
@@ -13,28 +14,31 @@
 class SettingsHandler
 {
 public:
-	SettingsHandler();
+  enum
+  {
+    SETTINGS_SIZE = 0x100,
+    // Key used to encrypt/decrypt setting.txt contents
+    INITIAL_SEED = 0x73B5DBFA
+  };
 
-	enum
-	{
-		SETTINGS_SIZE = 0x100,
-		// Key used to encrypt/decrypt setting.txt contents
-		INITIAL_SEED = 0x73B5DBFA
-	};
+  SettingsHandler();
 
-	void AddSetting(const std::string& key, const std::string& value);
+  bool Open(const std::string& settings_file_path);
+  bool Save(const std::string& destination_file_path) const;
 
-	const u8 *GetData() const;
-	const std::string GetValue(const std::string& key);
+  void AddSetting(const std::string& key, const std::string& value);
 
-	void Decrypt();
-	void Reset();
-	const std::string generateSerialNumber();
+  const u8* GetData() const;
+  const std::string GetValue(const std::string& key);
+
+  void Decrypt();
+  void Reset();
+  static std::string GenerateSerialNumber();
 
 private:
-	void WriteByte(u8 b);
+  void WriteByte(u8 b);
 
-	u8 m_buffer[SETTINGS_SIZE];
-	u32 m_position, m_key;
-	std::string decoded;
+  std::array<u8, SETTINGS_SIZE> m_buffer;
+  u32 m_position, m_key;
+  std::string decoded;
 };

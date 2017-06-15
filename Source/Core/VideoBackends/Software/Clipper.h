@@ -5,21 +5,17 @@
 #pragma once
 
 struct OutputVertexData;
-class PointerWrap;
 
 namespace Clipper
 {
-	void Init();
+void Init();
 
-	void SetViewOffset();
+void ProcessTriangle(OutputVertexData* v0, OutputVertexData* v1, OutputVertexData* v2);
 
-	void ProcessTriangle(OutputVertexData *v0, OutputVertexData *v1, OutputVertexData *v2);
+void ProcessLine(OutputVertexData* v0, OutputVertexData* v1);
 
-	void ProcessLine(OutputVertexData *v0, OutputVertexData *v1);
+bool CullTest(const OutputVertexData* v0, const OutputVertexData* v1, const OutputVertexData* v2,
+              bool& backface);
 
-	bool CullTest(OutputVertexData *v0, OutputVertexData *v1, OutputVertexData *v2, bool &backface);
-
-	void PerspectiveDivide(OutputVertexData *vertex);
-
-	void DoState(PointerWrap &p);
+void PerspectiveDivide(OutputVertexData* vertex);
 }

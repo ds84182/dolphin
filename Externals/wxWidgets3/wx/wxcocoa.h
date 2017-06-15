@@ -154,6 +154,8 @@
 
 #define WXWIN_COMPATIBILITY_2_8 0
 
+#define WXWIN_COMPATIBILITY_3_0 1
+
 #define wxDIALOG_UNIT_COMPATIBILITY   0
 
 
@@ -203,6 +205,7 @@
 
 #define wxUSE_PRINTF_POS_PARAMS 1
 
+#define wxUSE_COMPILER_TLS 1
 
 
 #define wxUSE_STL 1
@@ -213,6 +216,7 @@
 #else
     #define wxUSE_STD_DEFAULT  0
 #endif
+#define wxUSE_STD_CONTAINERS_COMPATIBLY 1
 
 #define wxUSE_STD_CONTAINERS 1
 
@@ -265,9 +269,9 @@
 
 #define wxUSE_DYNAMIC_LOADER 1
 
-#define wxUSE_SOCKETS 1
+#define wxUSE_SOCKETS 0
 
-#define wxUSE_IPV6          0
+#define wxUSE_IPV6          1
 
 #define wxUSE_FILESYSTEM 1
 
@@ -275,7 +279,7 @@
 
 #define wxUSE_FS_ARCHIVE 1
 
-#define wxUSE_FS_INET 1
+#define wxUSE_FS_INET 0
 
 #define wxUSE_ARCHIVE_STREAMS 1
 
@@ -295,13 +299,13 @@
 
 #define wxUSE_MIMETYPE 1
 
-#define wxUSE_PROTOCOL 1
+#define wxUSE_PROTOCOL 0
 
 #define wxUSE_PROTOCOL_FILE 1
 #define wxUSE_PROTOCOL_FTP 1
 #define wxUSE_PROTOCOL_HTTP 1
 
-#define wxUSE_URL 1
+#define wxUSE_URL 0
 
 #define wxUSE_URL_NATIVE 0
 
@@ -315,7 +319,7 @@
 
 #define wxUSE_SOUND 1
 
-#define wxUSE_MEDIACTRL 1
+#define wxUSE_MEDIACTRL 0
 
 #define wxUSE_XRC       0
 
@@ -375,6 +379,7 @@
 
 #define wxUSE_TIPWINDOW 1
 
+#define wxUSE_ACTIVITYINDICATOR 1
 #define wxUSE_ANIMATIONCTRL 1
 #define wxUSE_BANNERWINDOW 1
 #define wxUSE_BUTTON 1
@@ -448,6 +453,8 @@
 
 #define wxUSE_REARRANGECTRL 1
 
+#define wxUSE_ADDREMOVECTRL 1
+
 
 #define wxUSE_ACCEL 1
 
@@ -470,6 +477,8 @@
 #define wxUSE_MENUS 1
 
 #define wxUSE_NOTIFICATION_MESSAGE 1
+
+#define wxUSE_PREFERENCES_EDITOR 1
 
 #define wxUSE_RICHTOOLTIP 1
 
@@ -509,6 +518,8 @@
 
 #define wxUSE_PROGRESSDLG 1
 
+#define wxUSE_NATIVE_PROGRESSDLG 1
+
 #define wxUSE_STARTUP_TIPS 1
 
 #define wxUSE_TEXTDLG 1
@@ -524,7 +535,7 @@
 #define wxUSE_FILE_HISTORY 1
 
 
-#define wxUSE_METAFILE 1
+#define wxUSE_METAFILE 0
 #define wxUSE_ENH_METAFILE          0
 #define wxUSE_WIN_METAFILES_ALWAYS  0
 
@@ -535,11 +546,11 @@
 
 #define wxUSE_MDI_ARCHITECTURE 1
 
-#define wxUSE_PRINTING_ARCHITECTURE 1
+#define wxUSE_PRINTING_ARCHITECTURE 0
 
 #define wxUSE_HTML          0
 
-#define wxUSE_GLCANVAS 1
+#define wxUSE_GLCANVAS 0
 
 #define wxUSE_RICHTEXT       0
 
@@ -643,19 +654,30 @@
  */
 #define wxUSE_GSTREAMER 0
 
+#define wxUSE_GSTREAMER_PLAYER 0
+
 /* --- start MSW options --- */
 
-#ifndef wxUSE_UNICODE_MSLU
-    #define wxUSE_UNICODE_MSLU 0
+#define wxUSE_GRAPHICS_GDIPLUS wxUSE_GRAPHICS_CONTEXT
+
+#if defined(_MSC_VER) && _MSC_VER >= 1600
+#define wxUSE_GRAPHICS_DIRECT2D wxUSE_GRAPHICS_CONTEXT
+#else
+#define wxUSE_GRAPHICS_DIRECT2D 0
 #endif
 
-#define wxUSE_MFC           0
 
 #define wxUSE_OLE           0
 
 #define wxUSE_OLE_AUTOMATION 0
 
 #define wxUSE_ACTIVEX 0
+
+#if defined(_MSC_VER) && _MSC_VER >= 1700
+#define wxUSE_WINRT 0
+#else
+#define wxUSE_WINRT 0
+#endif
 
 #define wxUSE_DC_CACHEING 0
 
@@ -672,6 +694,9 @@
 #define wxUSE_OWNER_DRAWN 0
 
 #define wxUSE_TASKBARICON_BALLOONS 0
+
+#define wxUSE_TASKBARBUTTON 0
+
 
 #define wxUSE_UXTHEME           0
 
@@ -800,25 +825,21 @@
 #define wxUSE_PLUGINS 0
 
 /*
- * Use GTK print for printing under GTK+ 2.0
+ * Use GTK print for printing under GTK+ 2.10+
  */
 #define wxUSE_GTKPRINT 0
-/*
- * Use GNOME print for printing under GTK+ 2.0
- */
-#define wxUSE_LIBGNOMEPRINT 0
 /*
  * Use GNOME VFS for MIME types
  */
 #define wxUSE_LIBGNOMEVFS 0
 /*
- * Use the Hildon framework
+ * Use libnotify library.
  */
-#define wxUSE_LIBHILDON 0
+#define wxUSE_LIBNOTIFY 0
 /*
- * Use the Hildon 2.0 framework
+ * Use libnotify 0.7+ API
  */
-#define wxUSE_LIBHILDON2 0
+#define wxUSE_LIBNOTIFY_0_7 0
 /*
  * Use libXpm
  */
@@ -839,7 +860,7 @@
 /*
  * Use OpenGL
  */
-#define wxUSE_OPENGL 1
+#define wxUSE_OPENGL 0
 
 /*
  * Use MS HTML Help via libmspack (Unix)
@@ -854,7 +875,7 @@
 /*
  * wxWebKitCtrl
  */
-#define wxUSE_WEBKIT 1
+#define wxUSE_WEBKIT 0
 
 /*
  * Objective-C class name uniquifying
@@ -1152,7 +1173,7 @@
 #define HAVE_ICONV 1
 
 /* Define as "const" if the declaration of iconv() needs const.  */
-#define ICONV_CONST 
+#define ICONV_CONST
 
 /* Define if you have the <langinfo.h> header file.  */
 #define HAVE_LANGINFO_H 1
@@ -1267,8 +1288,4 @@
 /* define this when wxDC::Blit() respects SetDeviceOrigin() in wxGTK */
 /* #undef wxHAS_WORKING_GTK_DC_BLIT */
 
-#define wxUSE_COMPILER_TLS 1
-#define wxUSE_PREFERENCES_EDITOR 1
-
 #endif /* __WX_SETUP_H__ */
-

@@ -4,18 +4,15 @@
 
 #pragma once
 
-#include "VideoCommon/NativeVertexFormat.h"
+#include "Common/CommonTypes.h"
+#include "VideoCommon/VertexLoader.h"
 
-class VertexLoader_Position {
+class VertexLoader_Position
+{
 public:
+  // GetSize
+  static unsigned int GetSize(u64 _type, unsigned int _format, unsigned int _elements);
 
-	// Init
-	static void Init();
-
-	// GetSize
-	static unsigned int GetSize(u64 _type, unsigned int _format, unsigned int _elements);
-
-	// GetFunction
-	static TPipelineFunction GetFunction(u64 _type, unsigned int _format, unsigned int _elements);
+  // GetFunction
+  static TPipelineFunction GetFunction(u64 _type, unsigned int _format, unsigned int _elements);
 };
-

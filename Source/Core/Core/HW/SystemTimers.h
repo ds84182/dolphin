@@ -8,7 +8,6 @@
 
 namespace SystemTimers
 {
-
 /*
 GameCube                   MHz
 flipper <-> ARAM bus:      81 (DSP)
@@ -31,13 +30,20 @@ broadway:                       729
 
 enum
 {
-	TIMER_RATIO = 12
+  TIMER_RATIO = 12
+};
+
+enum class Mode
+{
+  GC,
+  Wii,
 };
 
 u32 GetTicksPerSecond();
 void PreInit();
 void Init();
 void Shutdown();
+void ChangePPCClock(Mode mode);
 
 // Notify timing system that somebody wrote to the decrementer
 void DecrementerSet();
@@ -45,5 +51,6 @@ u32 GetFakeDecrementer();
 
 void TimeBaseSet();
 u64 GetFakeTimeBase();
-
+// Custom RTC
+s64 GetLocalTimeRTCOffset();
 }

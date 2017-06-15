@@ -6,6 +6,8 @@ Dolphin includes or links code of the following third-party software projects:
    [LGPLv2.1+](https://git.kernel.org/cgit/bluetooth/bluez.git/tree/COPYING.LIB)
 - [Bochs](http://bochs.sourceforge.net/):
    [LGPLv2.1+](http://bochs.sourceforge.net/cgi-bin/lxr/source/COPYING)
+- [cubeb](https://github.com/kinetiknz/cubeb):
+   [ISC](https://github.com/kinetiknz/cubeb/blob/master/LICENSE)
 - [ENet](http://enet.bespin.org/):
    [MIT](http://enet.bespin.org/License.html)
 - [GCEmu](http://sourceforge.net/projects/gcemu-project/):
@@ -42,10 +44,8 @@ Dolphin includes or links code of the following third-party software projects:
    [MIT](https://www.opengl.org/registry/api/GL/glext.h)
 - [PearPC](http://pearpc.sourceforge.net/):
    [GPLv2](http://pearpc.cvs.sourceforge.net/viewvc/pearpc/pearpc/COPYING?view=markup) (with permission by the author to license under GPLv2+)
-- [PolarSSL](https://polarssl.org/):
-   [GPLv2+](https://github.com/polarssl/polarssl/blob/development/LICENSE)
-- [PortAudio](http://www.portaudio.com/):
-   [MIT](http://www.portaudio.com/license.html)
+- [mbed TLS](https://tls.mbed.org/):
+   [Apache 2.0](https://github.com/ARMmbed/mbedtls/blob/development/LICENSE)
 - [PulseAudio](http://www.freedesktop.org/wiki/Software/PulseAudio/):
    [LGPLv2.1+](http://cgit.freedesktop.org/pulseaudio/pulseaudio/tree/LICENSE)
 - [Qt5](http://qt-project.org/):

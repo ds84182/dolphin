@@ -4,118 +4,91 @@
 
 #pragma once
 
+#include <tuple>
+
+#include "Common/GL/GLUtil.h"
 #include "Common/LinearDiskCache.h"
-#include "Core/ConfigManager.h"
-#include "VideoBackends/OGL/GLUtil.h"
+
 #include "VideoCommon/GeometryShaderGen.h"
 #include "VideoCommon/PixelShaderGen.h"
 #include "VideoCommon/VertexShaderGen.h"
 
 namespace OGL
 {
-
 class SHADERUID
 {
 public:
-	VertexShaderUid vuid;
-	PixelShaderUid puid;
-	GeometryShaderUid guid;
+  VertexShaderUid vuid;
+  PixelShaderUid puid;
+  GeometryShaderUid guid;
 
-	SHADERUID() {}
+  bool operator<(const SHADERUID& r) const
+  {
+    return std::tie(puid, vuid, guid) < std::tie(r.puid, r.vuid, r.guid);
+  }
 
-	SHADERUID(const SHADERUID& r) : vuid(r.vuid), puid(r.puid), guid(r.guid) {}
-
-	bool operator <(const SHADERUID& r) const
-	{
-		if (puid < r.puid)
-			return true;
-
-		if (r.puid < puid)
-			return false;
-
-		if (vuid < r.vuid)
-			return true;
-
-		if (r.vuid < vuid)
-			return false;
-
-		if (guid < r.guid)
-			return true;
-
-		return false;
-	}
-
-	bool operator ==(const SHADERUID& r) const
-	{
-		return puid == r.puid && vuid == r.vuid && guid == r.guid;
-	}
+  bool operator==(const SHADERUID& r) const
+  {
+    return std::tie(puid, vuid, guid) == std::tie(r.puid, r.vuid, r.guid);
+  }
 };
-
 
 struct SHADER
 {
-	SHADER() : glprogid(0) { }
-	void Destroy()
-	{
-		glDeleteProgram(glprogid);
-		glprogid = 0;
-	}
-	GLuint glprogid; // OpenGL program id
+  SHADER() : glprogid(0) {}
+  void Destroy()
+  {
+    glDeleteProgram(glprogid);
+    glprogid = 0;
+  }
+  GLuint glprogid;  // OpenGL program id
 
-	std::string strvprog, strpprog, strgprog;
+  std::string strvprog, strpprog, strgprog;
 
-	void SetProgramVariables();
-	void SetProgramBindings();
-	void Bind();
+  void SetProgramVariables();
+  void SetProgramBindings(bool is_compute);
+  void Bind();
 };
 
 class ProgramShaderCache
 {
 public:
+  struct PCacheEntry
+  {
+    SHADER shader;
+    bool in_cache;
 
-	struct PCacheEntry
-	{
-		SHADER shader;
-		bool in_cache;
+    void Destroy() { shader.Destroy(); }
+  };
 
-		void Destroy()
-		{
-			shader.Destroy();
-		}
-	};
+  static PCacheEntry GetShaderProgram();
+  static SHADER* SetShader(u32 primitive_type);
+  static void GetShaderId(SHADERUID* uid, u32 primitive_type);
 
-	typedef std::map<SHADERUID, PCacheEntry> PCache;
+  static bool CompileShader(SHADER& shader, const std::string& vcode, const std::string& pcode,
+                            const std::string& gcode = "");
+  static bool CompileComputeShader(SHADER& shader, const std::string& code);
+  static GLuint CompileSingleShader(GLuint type, const std::string& code);
+  static void UploadConstants();
 
-	static PCacheEntry GetShaderProgram();
-	static GLuint GetCurrentProgram();
-	static SHADER* SetShader(DSTALPHA_MODE dstAlphaMode, u32 components, u32 primitive_type);
-	static void GetShaderId(SHADERUID *uid, DSTALPHA_MODE dstAlphaMode, u32 components, u32 primitive_type);
-
-	static bool CompileShader(SHADER &shader, const char* vcode, const char* pcode, const char* gcode = nullptr);
-	static GLuint CompileSingleShader(GLuint type, const char *code);
-	static void UploadConstants();
-
-	static void Init();
-	static void Shutdown();
-	static void CreateHeader();
+  static void Init();
+  static void Shutdown();
+  static void CreateHeader();
 
 private:
-	class ProgramShaderCacheInserter : public LinearDiskCacheReader<SHADERUID, u8>
-	{
-	public:
-		void Read(const SHADERUID &key, const u8 *value, u32 value_size) override;
-	};
+  class ProgramShaderCacheInserter : public LinearDiskCacheReader<SHADERUID, u8>
+  {
+  public:
+    void Read(const SHADERUID& key, const u8* value, u32 value_size) override;
+  };
 
-	static PCache pshaders;
-	static PCacheEntry* last_entry;
-	static SHADERUID last_uid;
+  typedef std::map<SHADERUID, PCacheEntry> PCache;
+  static PCache pshaders;
+  static PCacheEntry* last_entry;
+  static SHADERUID last_uid;
 
-	static UidChecker<PixelShaderUid,PixelShaderCode> pixel_uid_checker;
-	static UidChecker<VertexShaderUid,VertexShaderCode> vertex_uid_checker;
-	static UidChecker<GeometryShaderUid,ShaderCode> geometry_uid_checker;
-
-	static u32 s_ubo_buffer_size;
-	static s32 s_ubo_align;
+  static u32 s_ubo_buffer_size;
+  static s32 s_ubo_align;
 };
 
 }  // namespace OGL

@@ -5,46 +5,40 @@
 #pragma once
 
 #include <memory>
-#include <unordered_map>
+#include <vector>
 
 #include "Common/CommonTypes.h"
 
-#include "VideoBackends/Software/CPMemLoader.h"
 #include "VideoBackends/Software/NativeVertexFormat.h"
+#include "VideoBackends/Software/SetupUnit.h"
 
-#include "VideoCommon/VertexLoaderBase.h"
+#include "VideoCommon/VertexManagerBase.h"
 
-class PointerWrap;
-class SetupUnit;
-
-class SWVertexLoader
+class SWVertexLoader : public VertexManagerBase
 {
-	u32 m_VertexSize;
+public:
+  SWVertexLoader();
+  ~SWVertexLoader();
 
-	VAT* m_CurrentVat;
+  std::unique_ptr<NativeVertexFormat>
+  CreateNativeVertexFormat(const PortableVertexDeclaration& vdec) override;
 
-	InputVertexData m_Vertex;
+protected:
+  void ResetBuffer(u32 stride) override;
+  u16* GetIndexBuffer() { return &LocalIBuffer[0]; }
+private:
+  void vFlush() override;
+  std::vector<u8> LocalVBuffer;
+  std::vector<u16> LocalIBuffer;
 
-	void ParseVertex(const PortableVertexDeclaration& vdec);
+  InputVertexData m_Vertex;
 
-	SetupUnit *m_SetupUnit;
+  void ParseVertex(const PortableVertexDeclaration& vdec, int index);
 
-	bool m_TexGenSpecialCase;
+  SetupUnit m_SetupUnit;
 
-	std::unordered_map<VertexLoaderUID, std::unique_ptr<VertexLoaderBase>> m_VertexLoaderMap;
-	std::vector<u8> m_LoadedVertices;
-	VertexLoaderBase* m_CurrentLoader;
-
-	u8 m_attributeIndex;
+  bool m_TexGenSpecialCase;
 
 public:
-	SWVertexLoader();
-	~SWVertexLoader();
-
-	void SetFormat(u8 attributeIndex, u8 primitiveType);
-
-	u32 GetVertexSize() { return m_VertexSize; }
-
-	void LoadVertex();
-	void DoState(PointerWrap &p);
+  void SetFormat(u8 attributeIndex, u8 primitiveType);
 };

@@ -4,56 +4,43 @@
 
 #pragma once
 
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "Common/CommonTypes.h"
+#include "Core/IOS/ES/Formats.h"
 
 namespace DiscIO
 {
-
-class IBlobReader;
+class BlobReader;
 
 class WiiWAD
 {
 public:
+  explicit WiiWAD(const std::string& name);
+  ~WiiWAD();
 
-	WiiWAD(const std::string& _rName);
-
-	~WiiWAD();
-
-	bool IsValid() const { return m_Valid; }
-	u32 GetCertificateChainSize() const { return m_CertificateChainSize; }
-	u32 GetTicketSize() const { return m_TicketSize; }
-	u32 GetTMDSize() const { return m_TMDSize; }
-	u32 GetDataAppSize() const { return m_DataAppSize; }
-	u32 GetFooterSize() const { return m_FooterSize; }
-
-	u8* GetCertificateChain() const { return m_pCertificateChain; }
-	u8* GetTicket() const { return m_pTicket; }
-	u8* GetTMD() const { return m_pTMD; }
-	u8* GetDataApp() const { return m_pDataApp; }
-	u8* GetFooter() const { return m_pFooter; }
-
-	static bool IsWiiWAD(const std::string& _rName);
+  bool IsValid() const { return m_valid; }
+  const std::vector<u8>& GetCertificateChain() const { return m_certificate_chain; }
+  const IOS::ES::TicketReader& GetTicket() const { return m_ticket; }
+  const IOS::ES::TMDReader& GetTMD() const { return m_tmd; }
+  const std::vector<u8>& GetDataApp() const { return m_data_app; }
+  const std::vector<u8>& GetFooter() const { return m_footer; }
+  std::vector<u8> GetContent(u16 index) const;
 
 private:
+  bool ParseWAD();
 
-	bool m_Valid;
+  bool m_valid;
 
-	u32 m_CertificateChainSize;
-	u32 m_TicketSize;
-	u32 m_TMDSize;
-	u32 m_DataAppSize;
-	u32 m_FooterSize;
+  std::unique_ptr<BlobReader> m_reader;
 
-	u8* m_pCertificateChain;
-	u8* m_pTicket;
-	u8* m_pTMD;
-	u8* m_pDataApp;
-	u8* m_pFooter;
-
-	u8* CreateWADEntry(DiscIO::IBlobReader& _rReader, u32 _Size, u64 _Offset);
-	bool ParseWAD(DiscIO::IBlobReader& _rReader);
+  u64 m_data_app_offset = 0;
+  std::vector<u8> m_certificate_chain;
+  IOS::ES::TicketReader m_ticket;
+  IOS::ES::TMDReader m_tmd;
+  std::vector<u8> m_data_app;
+  std::vector<u8> m_footer;
 };
-
 }

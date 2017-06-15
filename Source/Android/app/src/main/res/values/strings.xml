@@ -4,156 +4,129 @@
     <!-- Title of the app -->
     <string name="app_name">Dolphin Emulator</string>
 
-    <!-- Navigation-related Strings -->
-    <string name="drawer_open">Open navigation drawer</string>
-    <string name="drawer_close">Close navigation drawer</string>
+    <!-- WARNING Do not move these controller entries AT ALL COSTS! They are indexed with ints, and an assumption
+            is made that they are placed together so that we can access them sequentially in a loop. -->
+    <string name="controller_0">GameCube Controller 1</string>
+    <string name="controller_1">GameCube Controller 2</string>
+    <string name="controller_2">GameCube Controller 3</string>
+    <string name="controller_3">GameCube Controller 4</string>
+    <!-- END WARNING -->
 
-    <!-- About Fragment -->
-    <string name="build_revision">Build Revision</string>
-    <string name="supports_gles3">Supports OpenGL ES 3</string>
-    <string name="supports_neon">Supports NEON</string>
-    <string name="general">General</string>
-    <string name="cpu">CPU</string>
-    <string name="gles_two">GLES 2</string>
-    <string name="gles_three">GLES 3</string>
-    <string name="desktop_gl">OpenGL</string>
+    <string name="controller_control">Control Stick</string>
+    <string name="controller_c">C Stick</string>
+    <string name="controller_trig">Triggers</string>
+    <string name="controller_dpad">D-Pad</string>
+    <string name="modifier_range">Modifier Range</string>
+    <string name="analog_radius">Analog Radius (High value = High sensitivity)</string>
+    <string name="analog_threshold">Analog Threshold (Low value = High sensitivity)</string>
 
-    <!-- About Menu - CPU Info -->
-    <string name="cpu_abi_one">CPU ABI 1</string>
-    <string name="cpu_abi_two">CPU ABI 2</string>
-    <string name="cpu_info">CPU Info</string>
-    <string name="cpu_type">CPU Type</string>
-    <string name="cpu_features">CPU Features</string>
-    <string name="num_cores">Number of Cores</string>
-    <string name="cpu_implementer">CPU Implementer</string>
-    <string name="cpu_hardware">Hardware</string>
-    <string name="unknown_part_num">Unknown (%1$d). Please report this number so it can be documented!</string>
+    <!-- WARNING Do not move these controller entries AT ALL COSTS! They are indexed with ints, and an assumption
+            is made that they are placed together so that we can access them sequentially in a loop. -->
+    <string name="wiimote_0">Wii Remote 1</string>
+    <string name="wiimote_1">Wii Remote 2</string>
+    <string name="wiimote_2">Wii Remote 3</string>
+    <string name="wiimote_3">Wii Remote 4</string>
+    <!-- END WARNING -->
 
-    <!-- Folder Browser -->
-    <string name="current_dir">Current Dir: %1$s</string>
-    <string name="parent_directory">Parent Directory</string>
-    <string name="file_size">File Size: %1$s</string>
+    <string name="wiimote_extensions">Extension</string>
+    <string name="wiimote_extensions_descrip">Choose and bind the Wii Remote extension.</string>
+    <string name="wiimote_ir">IR</string>
+    <string name="wiimote_swing">Swing</string>
+    <string name="wiimote_tilt">Tilt</string>
+    <string name="wiimote_shake">Shake</string>
 
-
-    <!-- Game List Activity -->
-    <string name="clear_game_list">Clear game list</string>
-    <string name="clear_game_list_confirm">Do you want to clear the game list?</string>
-    <string name="game_list">Game List</string>
-    <string name="browse_folder">Browse Folder</string>
-    <string name="settings">Settings</string>
-    <string name="about">About</string>
-    <string name="file_size_gib">File Size: %.2f GiB</string>
-    <string name="file_size_mib">File Size: %.2f MiB</string>
-
-    <!-- Game List Activity - Device Compatibility AlertDialog -->
-    <string name="device_compat_warning">Device Compatibility Warning</string>
-    <string name="device_compat_warning_msg">Your phone doesn\'t support NEON which makes it incapable of running Dolphin Mobile?\nDo you want to try anyway?</string>
-    <string name="device_gles3compat_warning_msg">Your device has known buggy video drivers for OpenGL ES 3.\nDo you want to try anyway?</string>
-
-    <!-- Game List Fragment -->
-    <string name="file_clicked">File clicked: %1$s</string>
-
-    <!-- Emulation Overlay -->
-    <string name="enable_input_overlay">Enable Input Overlay</string>
-    <string name="disable_input_overlay">Disable Input Overlay</string>
-    <string name="overlay_screenshot">Take Screenshot</string>
-    <string name="overlay_savestate">Save State</string>
-    <string name="overlay_loadstate">Load State</string>
-    <string name="overlay_exit_emulation">Exit</string>
-    <string name="overlay_exit_emulation_confirm">Are you sure you wish to exit this game?</string>
-    <string name="overlay_slot1">Slot 1</string>
-    <string name="overlay_slot2">Slot 2</string>
-    <string name="overlay_slot3">Slot 3</string>
-    <string name="overlay_slot4">Slot 4</string>
-    <string name="overlay_slot5">Slot 5</string>
-
-    <!-- Input Config Fragment -->
-    <string name="input_settings">Input</string>
-    <string name="input_overlay">Input Overlay</string>
-    <string name="input_overlay_desc">Configure the onscreen input overlay.</string>
-    <string name="input_overlay_layout">Input Overlay Layout</string>
-    <string name="input_overlay_layout_desc">Button layout for the input overlay.</string>
-    <string name="controls_size">Adjust the control size</string>
-    <string name="gamecube_bindings">GameCube Controller Bindings</string>
-    <string name="controller_0">Controller 1</string>
-    <string name="controller_1">Controller 2</string>
-    <string name="controller_2">Controller 3</string>
-    <string name="controller_3">Controller 4</string>
-    <string name="enable_controller">Enable controller</string>
-    <string name="wiimote_bindings">Wiimote Bindings</string>
-    <string name="wiimote_1">Wiimote 1</string>
-    <string name="wiimote_2">Wiimote 2</string>
-    <string name="wiimote_3">Wiimote 3</string>
-    <string name="wiimote_4">Wiimote 4</string>
-    <string name="enable_wiimote">Enable Wiimote</string>
     <string name="input_binding">Input Binding</string>
     <string name="input_binding_descrip">Press or move an input to bind it to %1$s.</string>
-    <!-- GameCube buttons (May be shared with Wiimote stuff too) -->
-    <string name="button_a">Button A</string>
-    <string name="button_b">Button B</string>
-    <string name="button_start">Button Start</string>
-    <string name="button_x">Button X</string>
-    <string name="button_y">Button Y</string>
-    <string name="button_z">Button Z</string>
-    <string name="dpad_up">D-Pad Up</string>
-    <string name="dpad_down">D-Pad Down</string>
-    <string name="dpad_left">D-Pad Left</string>
-    <string name="dpad_right">D-Pad Right</string>
-    <string name="main_stick_up">Main Stick Up</string>
-    <string name="main_stick_down">Main Stick Down</string>
-    <string name="main_stick_left">Main Stick Left</string>
-    <string name="main_stick_right">Main Stick Right</string>
-    <string name="c_stick_up">C Stick Up</string>
-    <string name="c_stick_down">C Stick Down</string>
-    <string name="c_stick_left">C Stick Left</string>
-    <string name="c_stick_right">C Stick Right</string>
-    <string name="trigger_left">Trigger L</string>
-    <string name="trigger_right">Trigger R</string>
-    <!-- Wiimote (+ extension) only buttons -->
-    <string name="button_one">Button 1</string>
-    <string name="button_two">Button 2</string>
-    <string name="button_plus">Button +</string>
-    <string name="button_minus">Button -</string>
-    <string name="button_home">Button Home</string>
-    <string name="ir_up">IR Up</string>
-    <string name="ir_down">IR Down</string>
-    <string name="ir_left">IR Left</string>
-    <string name="ir_right">IR Right</string>
-    <string name="ir_forward">IR Forward</string>
-    <string name="ir_backward">IR Backward</string>
-    <string name="swing_up">Swing Up</string>
-    <string name="swing_down">Swing Down</string>
-    <string name="swing_left">Swing Left</string>
-    <string name="swing_right">Swing Right</string>
-    <string name="tilt_forward">Tilt Forward</string>
-    <string name="tilt_backward">Tilt Backward</string>
-    <string name="tilt_left">Tilt Left</string>
-    <string name="tilt_right">Tilt Right</string>
-    <string name="shake_x">Shake X</string>
-    <string name="shake_y">Shake Y</string>
-    <string name="shake_z">Shake Z</string>
+
+    <!-- Generic buttons (Shared with lots of stuff) -->
+    <string name="generic_buttons">Buttons</string>
+    <string name="generic_up">Up</string>
+    <string name="generic_down">Down</string>
+    <string name="generic_left">Left</string>
+    <string name="generic_right">Right</string>
+    <string name="generic_forward">Forward</string>
+    <string name="generic_backward">Backward</string>
+    <string name="generic_stick">Stick</string>
+    <string name="generic_green">Green</string>
+    <string name="generic_red">Red</string>
+    <string name="generic_yellow">Yellow</string>
+    <string name="generic_blue">Blue</string>
+    <string name="generic_orange">Orange</string>
+
+    <!-- GameCube buttons (May be shared with other stuff too) -->
+    <string name="button_a">A</string>
+    <string name="button_b">B</string>
+    <string name="button_start">START</string>
+    <string name="button_x">X</string>
+    <string name="button_y">Y</string>
+    <string name="button_z">Z</string>
+    <string name="trigger_left">L</string>
+    <string name="trigger_right">R</string>
+
+    <!-- Wii Remote buttons (May be shared with other stuff too) -->
+    <string name="button_one">1</string>
+    <string name="button_two">2</string>
+    <string name="button_minus">-</string>
+    <string name="button_plus">+</string>
+    <string name="button_home">HOME</string>
+    <string name="ir_hide">Hide</string>
+    <string name="tilt_modifier">Modifier</string>
+    <string name="shake_x">X</string>
+    <string name="shake_y">Y</string>
+    <string name="shake_z">Z</string>
+
+    <!-- Nunchuk only buttons -->
+    <string name="nunchuk_button_c">C</string>
+
+    <!-- Classic only buttons -->
+    <string name="classic_button_zl">ZL</string>
+    <string name="classic_button_zr">ZR</string>
+    <string name="classic_leftstick">Left Stick</string>
+    <string name="classic_rightstick">Right Stick</string>
+
+    <!-- Guitar only buttons -->
+    <string name="guitar_frets">Frets</string>
+    <string name="guitar_strum">Strum</string>
+    <string name="guitar_whammy">Whammy</string>
+    <string name="guitar_whammy_bar">Bar</string>
+
+    <!-- Drums only buttons -->
+    <string name="drums_pads">Pads</string>
+    <string name="drums_pad_bass">Bass</string>
+
+    <!-- Turntable only buttons -->
+    <string name="turntable_button_green_left">Green Left</string>
+    <string name="turntable_button_red_left">Red Left</string>
+    <string name="turntable_button_blue_left">Blue Left</string>
+    <string name="turntable_button_green_right">Green Right</string>
+    <string name="turntable_button_red_right">Red Right</string>
+    <string name="turntable_button_blue_right">Blue Right</string>
+    <string name="turntable_button_euphoria">Euphoria</string>
+    <string name="turntable_table_left">Table Left</string>
+    <string name="turntable_table_right">Table Right</string>
+    <string name="turntable_effect">Effect</string>
+    <string name="turntable_effect_dial">Dial</string>
+    <string name="turntable_crossfade">Crossfade</string>
 
     <!-- CPU Preference Fragment -->
-    <string name="interpreter">Interpreter</string>
-    <string name="jit64_recompiler">JIT64 Recompiler</string>
-    <string name="jitil_recompiler">JITIL Recompiler</string>
-    <string name="jit_arm_recompiler">JIT ARM Recompiler</string>
-    <string name="jit_arm64_recompiler">JIT ARM64 Recompiler</string>
-    <string name="cpu_settings">CPU</string>
     <string name="cpu_core">CPU Core</string>
     <string name="cpu_core_desc">%s</string>
     <string name="dual_core">Dual Core</string>
     <string name="dual_core_descrip">Split workload to two CPU cores instead of one. Increases speed.</string>
-    <string name="fastmem">Fastmem</string>
-    <string name="fastmem_desc">Uses potentially unsafe optimizations for memory access.</string>
+    <string name="overclock_enable">Override Emulated CPU Clock Speed</string>
+    <string name="overclock_enable_description">Higher values can make variable-framerate games run at a higher framerate, requiring a powerful device. Lower values make games run at a lower framerate, increasing emulation speed, but reducing the emulated console\'s performance.</string>
+    <string name="overclock_title">Emulated CPU Clock Speed</string>
+    <string name="overclock_warning">WARNING: Changing this from the default (100%) WILL break games and cause glitches. Please do not report bugs that occur with a non-default clock.</string>
+    <string name="wiimote_scanning">Wii Remote Continuous Scanning</string>
+    <string name="wiimote_scanning_description">Leave this on if you are using a DolphinBar for real Wiimote support.</string>
+    <string name="wiimote_speaker">Wii Remote Speaker</string>
+    <string name="wiimote_speaker_description">Enable sound output through the speaker on a real Wiimote (DolphinBar required).</string>
+    <string name="audio_stretch">Audio Stretching</string>
+    <string name="audio_stretch_description">Stretches audio to reduce stuttering. Increases latency.</string>
 
     <!-- Video Preference Fragment -->
-    <string name="video_settings">Video</string>
-    <string name="software_renderer">Software Renderer</string>
-    <string name="opengl_es3">OpenGL ES</string>
-    <string name="opengl">OpenGL</string>
     <string name="video_backend">Video Backend</string>
-    <string name="video_backend_desc">%s</string>
+    <string name="video_backend_descrip">Select the API used for graphics rendering.</string>
     <string name="show_fps">Show FPS</string>
     <string name="show_fps_descrip">Show the number of frames rendered per second as a measure of emulation speed.</string>
 
@@ -180,10 +153,10 @@
     <string name="stereoscopy_mode_descrip">Select the stereoscopic 3D mode.</string>
     <string name="sterescopy_depth">Depth</string>
     <string name="sterescopy_depth_descrip">Control the distance between the virtual cameras.\nA higher value creates a stronger feeling of depth while a lower value is more comfortable.</string>
-    <string name="convergence">Convergence</string>
-    <string name="convergence_descrip">Control the distance of the convergence plane, this is the distance at which objects will appear to be in front of the screen.\nA higher value creates stronger out-of-screen effects while a lower value is more comfortable.</string>
-    <string name="swap_eyes">Swap Eyes</string>
-    <string name="swap_eyes_descrip">Swap the left and right eye, mostly useful if you want to view side-by-side cross-eyed.</string>
+    <string name="sterescopy_convergence">Convergence</string>
+    <string name="sterescopy_convergence_descrip">Control the distance of the convergence plane, this is the distance at which objects will appear to be in front of the screen.\nA higher value creates stronger out-of-screen effects while a lower value is more comfortable.</string>
+    <string name="sterescopy_swap_eyes">Swap Eyes</string>
+    <string name="sterescopy_swap_eyes_descrip">Swap the left and right eye, mostly useful if you want to view side-by-side cross-eyed.</string>
 
     <string name="hacks">Hacks</string>
     <string name="embedded_frame_buffer">Embedded Frame Buffer</string>
@@ -191,21 +164,15 @@
     <string name="skip_efb_access_descrip">Ignore any requests from the CPU to read/write to the EFB.</string>
     <string name="ignore_format_changes">Ignore Format Changes</string>
     <string name="ignore_format_changes_descrip">Ignore any changes to the EFB format.</string>
-    <string name="efb_copy_method">EFB Copy Method</string>
-    <string name="efb_copy_method_descrip">Determines how EFB copies will be emulated.</string>
-    <string name="efb_copy_texture">Texture</string>
-    <string name="efb_copy_ram_uncached">RAM (uncached)</string>
-    <string name="efb_copy_ram_cached">RAM (cached)</string>
+    <string name="efb_copy_method">Store EFB Copies to Texture Only</string>
+    <string name="efb_copy_method_descrip">Stores EFB Copies exclusively on the GPU, bypassing system memory. Causes graphical defects in a small number of games. If unsure, leave this checked.</string>
     <string name="texture_cache">Texture Cache</string>
     <string name="texture_cache_accuracy">Texture Cache Accuracy</string>
     <string name="texture_cache_accuracy_descrip">The safer the selection, the less likely the emulator will be missing any texture updates from RAM.</string>
-    <string name="texture_cache_accuracy_low">Low</string>
-    <string name="texture_cache_accuracy_medium">Medium</string>
-    <string name="texture_cache_accuracy_high">High</string>
+    <string name="gpu_texture_decoding">GPU Texture Decoding</string>
+    <string name="gpu_texture_decoding_descrip">Decodes textures on the GPU using compute shaders where supported. May improve performance in some scenarios.</string>
     <string name="external_frame_buffer">External Frame Buffer</string>
     <string name="external_frame_buffer_descrip">Determines how the XFB will be emulated.</string>
-    <string name="external_frame_buffer_virtual">Virtual</string>
-    <string name="external_frame_buffer_real">Real</string>
     <string name="disable_destination_alpha">Disable Destination Alpha</string>
     <string name="disable_destination_alpha_descrip">Disables emulation of a hardware feature called destination alpha, which is used in many games for various effects.</string>
     <string name="fast_depth_calculation">Fast Depth Calculation</string>
@@ -216,16 +183,18 @@
     <!-- Miscellaneous -->
     <string name="yes">Yes</string>
     <string name="no">No</string>
+    <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
+    <string name="clear">Clear</string>
     <string name="disabled">Disabled</string>
     <string name="other">Other</string>
 
-    <!-- New UI Strings -->
-    <string name="title_new_ui">Dolphin New UI</string>
-
-
     <!-- Game Grid Screen-->
-    <string name="grid_menu_settings">Settings</string>
+    <string name="grid_menu_core_settings">CPU Settings</string>
+    <string name="grid_menu_video_settings">Video Settings</string>
+    <string name="grid_menu_gcpad_settings">GameCube Input</string>
+    <string name="grid_menu_wiimote_settings">Wii Input</string>
+    <string name="grid_menu_refresh">Refresh Library</string>
 
     <!-- Add Directory Screen-->
     <string name="add_directory_title">Add Folder to Library</string>
@@ -233,10 +202,42 @@
     <string name="add_directory_empty_folder">That folder is empty.</string>
 
     <!-- Preferences Screen -->
-    <string name="preferences_cpu">CPU Settings</string>
-    <string name="preferences_input">Input Settings</string>
-    <string name="preferences_video">Video Settings</string>
-    <string name="emulation_title">Emulation Activity</string>
+    <string name="preferences_save_exit">Save and Exit</string>
+    <string name="preferences_settings">Settings</string>
+    <string name="preferences_extensions">Extension Bindings</string>
 
-    <string name="emulation_toggle_input">Toggle Input Overlay</string>
+    <!-- Emulation Menu -->
+    <string name="emulation_screenshot">Take Screenshot</string>
+    <string name="emulation_savestate">Save State</string>
+    <string name="emulation_loadstate">Load State</string>
+    <string name="emulation_exit">Exit</string>
+    <string name="emulation_slot1">Slot 1</string>
+    <string name="emulation_slot2">Slot 2</string>
+    <string name="emulation_slot3">Slot 3</string>
+    <string name="emulation_slot4">Slot 4</string>
+    <string name="emulation_slot5">Slot 5</string>
+    <string name="emulation_slot6">Slot 6</string>
+    <string name="emulation_quicksave">Quick Save</string>
+    <string name="emulation_quickload">Quick Load</string>
+    <string name="emulation_refresh_wiimotes">Refresh Wii Remotes</string>
+    <string name="emulation_configure_controls">Configure Controls</string>
+    <string name="emulation_edit_layout">Edit Layout</string>
+    <string name="emulation_done">Done</string>
+    <string name="emulation_toggle_controls">Toggle Controls</string>
+    <string name="emulation_toggle_all">Toggle All</string>
+    <string name="emulation_control_scale">Adjust Scale</string>
+    <string name="emulation_choose_controller">Choose Controller</string>
+    <string name="emulation_controller_changed">You may have to reload the game after changing extensions.</string>
+    
+    <!-- GC Adapter Menu-->
+    <string name="gc_adapter_rumble">Enable Vibration</string>
+    <string name="gc_adapter_rumble_description">Enable the vibration function for this GameCube controller.</string>
+    <string name="gc_adapter_bongos">Bongo Controller</string>
+    <string name="gc_adapter_bongos_description">Enable this if you are using bongos on this port.</string>
+
+    <!-- Wii Remote Input Menu-->
+    <string name="header_wiimote_general">General</string>
+    <string name="header_controllers">Controllers</string>
+
+    <string name="write_permission_needed">You need to allow write access to external storage for the emulator to work</string>
 </resources>

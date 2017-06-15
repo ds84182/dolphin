@@ -7,24 +7,26 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.widget.Toolbar;
 
 import org.dolphinemu.dolphinemu.BuildConfig;
 import org.dolphinemu.dolphinemu.R;
 import org.dolphinemu.dolphinemu.adapters.FileAdapter;
 import org.dolphinemu.dolphinemu.model.GameDatabase;
 import org.dolphinemu.dolphinemu.model.GameProvider;
+import org.dolphinemu.dolphinemu.ui.main.MainPresenter;
 
 /**
  * An Activity that shows a list of files and folders, allowing the user to tell the app which folder(s)
  * contains the user's games.
  */
-public class AddDirectoryActivity extends Activity implements FileAdapter.FileClickListener
+public class AddDirectoryActivity extends AppCompatActivity implements FileAdapter.FileClickListener
 {
 	public static final String KEY_CURRENT_PATH = BuildConfig.APPLICATION_ID + ".path";
 
@@ -39,7 +41,7 @@ public class AddDirectoryActivity extends Activity implements FileAdapter.FileCl
 		setContentView(R.layout.activity_add_directory);
 
 		mToolbar = (Toolbar) findViewById(R.id.toolbar_folder_list);
-		setActionBar(mToolbar);
+		setSupportActionBar(mToolbar);
 
 		RecyclerView recyclerView = (RecyclerView) findViewById(R.id.list_files);
 
@@ -97,8 +99,6 @@ public class AddDirectoryActivity extends Activity implements FileAdapter.FileCl
 
 	/**
 	 * Add a directory to the library, and if successful, end the activity.
-	 *
-	 * @param path The target directory's path.
 	 */
 	@Override
 	public void addDirectory()
@@ -132,5 +132,11 @@ public class AddDirectoryActivity extends Activity implements FileAdapter.FileCl
 	public void updateSubtitle(String path)
 	{
 		mToolbar.setSubtitle(path);
+	}
+
+	public static void launch(Activity activity)
+	{
+		Intent fileChooser = new Intent(activity, AddDirectoryActivity.class);
+		activity.startActivityForResult(fileChooser, MainPresenter.REQUEST_ADD_DIRECTORY);
 	}
 }

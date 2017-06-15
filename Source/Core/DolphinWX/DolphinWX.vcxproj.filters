@@ -1,5 +1,5 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="GUI">
       <UniqueIdentifier>{0c0288ac-1168-4534-b3d3-051b9981f842}</UniqueIdentifier>
@@ -28,11 +28,17 @@
     <Filter Include="GUI\Config">
       <UniqueIdentifier>{9d8b4144-f335-4fa4-b995-852533298474}</UniqueIdentifier>
     </Filter>
+    <Filter Include="GUI\Widgets">
+      <UniqueIdentifier>{a894e2e3-e577-4b65-8572-055699f23a49}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GUI\ISOProperties">
+      <UniqueIdentifier>{d72aa7f0-ed24-4fed-9d3a-38b82d1b753c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MainNoGUI.cpp" />
-    <ClCompile Include="WXInputBase.cpp" />
+    <ClCompile Include="WxEventUtils.cpp" />
     <ClCompile Include="WxUtils.cpp" />
     <ClCompile Include="Cheats\CheatsWindow.cpp">
       <Filter>GUI\Cheats</Filter>
@@ -45,6 +51,9 @@
     </ClCompile>
     <ClCompile Include="Cheats\GeckoCodeDiag.cpp">
       <Filter>GUI\Cheats</Filter>
+    </ClCompile>
+    <ClCompile Include="Debugger\AssemblerEntryDialog.cpp">
+      <Filter>GUI\Debugger</Filter>
     </ClCompile>
     <ClCompile Include="Debugger\BreakpointDlg.cpp">
       <Filter>GUI\Debugger</Filter>
@@ -100,10 +109,40 @@
     <ClCompile Include="NetPlay\NetWindow.cpp">
       <Filter>GUI\NetPlay</Filter>
     </ClCompile>
-    <ClCompile Include="InputConfigDiag.cpp">
+    <ClCompile Include="Input\InputConfigDiag.cpp">
       <Filter>GUI\InputConfig</Filter>
     </ClCompile>
-    <ClCompile Include="InputConfigDiagBitmaps.cpp">
+    <ClCompile Include="Input\InputConfigDiagBitmaps.cpp">
+      <Filter>GUI\InputConfig</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\HotkeyInputConfigDiag.cpp">
+      <Filter>GUI\InputConfig</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\GCPadInputConfigDiag.cpp">
+      <Filter>GUI\InputConfig</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\MicButtonConfigDiag.cpp">
+      <Filter>GUI\InputConfig</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\GCKeyboardInputConfigDiag.cpp">
+      <Filter>GUI\InputConfig</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\WiimoteInputConfigDiag.cpp">
+      <Filter>GUI\InputConfig</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\NunchukInputConfigDiag.cpp">
+      <Filter>GUI\InputConfig</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\ClassicInputConfigDiag.cpp">
+      <Filter>GUI\InputConfig</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\GuitarInputConfigDiag.cpp">
+      <Filter>GUI\InputConfig</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\DrumsInputConfigDiag.cpp">
+      <Filter>GUI\InputConfig</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\TurntableInputConfigDiag.cpp">
       <Filter>GUI\InputConfig</Filter>
     </ClCompile>
     <ClCompile Include="Debugger\DebuggerPanel.cpp">
@@ -121,9 +160,6 @@
     <ClCompile Include="AboutDolphin.cpp">
       <Filter>GUI</Filter>
     </ClCompile>
-    <ClCompile Include="ARCodeAddEdit.cpp">
-      <Filter>GUI</Filter>
-    </ClCompile>
     <ClCompile Include="FifoPlayerDlg.cpp">
       <Filter>GUI</Filter>
     </ClCompile>
@@ -139,16 +175,16 @@
     <ClCompile Include="GameListCtrl.cpp">
       <Filter>GUI</Filter>
     </ClCompile>
-    <ClCompile Include="HotkeyDlg.cpp">
-      <Filter>GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="ISOProperties.cpp">
-      <Filter>GUI</Filter>
-    </ClCompile>
     <ClCompile Include="LogConfigWindow.cpp">
       <Filter>GUI</Filter>
     </ClCompile>
     <ClCompile Include="LogWindow.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="MainMenuBar.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="MainToolBar.cpp">
       <Filter>GUI</Filter>
     </ClCompile>
     <ClCompile Include="MemcardManager.cpp">
@@ -181,14 +217,29 @@
     <ClCompile Include="Config\GameCubeConfigPane.cpp">
       <Filter>GUI\Config</Filter>
     </ClCompile>
+    <ClCompile Include="Config\GCAdapterConfigDiag.cpp">
+      <Filter>GUI\Config</Filter>
+    </ClCompile>
     <ClCompile Include="Config\WiiConfigPane.cpp">
       <Filter>GUI\Config</Filter>
     </ClCompile>
     <ClCompile Include="Config\PathConfigPane.cpp">
       <Filter>GUI\Config</Filter>
     </ClCompile>
+    <ClCompile Include="Config\AddUSBDeviceDiag.cpp">
+      <Filter>GUI\Config</Filter>
+    </ClCompile>
     <ClCompile Include="Config\AdvancedConfigPane.cpp">
       <Filter>GUI\Config</Filter>
+    </ClCompile>
+    <ClCompile Include="ISOProperties\FilesystemPanel.cpp">
+      <Filter>GUI\ISOProperties</Filter>
+    </ClCompile>
+    <ClCompile Include="ISOProperties\InfoPanel.cpp">
+      <Filter>GUI\ISOProperties</Filter>
+    </ClCompile>
+    <ClCompile Include="ISOProperties\ISOProperties.cpp">
+      <Filter>GUI\ISOProperties</Filter>
     </ClCompile>
     <ClCompile Include="NetPlay\NetPlaySetupFrame.cpp">
       <Filter>GUI\NetPlay</Filter>
@@ -196,13 +247,28 @@
     <ClCompile Include="NetPlay\ChangeGameDialog.cpp">
       <Filter>GUI\NetPlay</Filter>
     </ClCompile>
+    <ClCompile Include="NetPlay\MD5Dialog.cpp">
+      <Filter>GUI\NetPlay</Filter>
+    </ClCompile>
     <ClCompile Include="NetPlay\PadMapDialog.cpp">
       <Filter>GUI\NetPlay</Filter>
+    </ClCompile>
+    <ClCompile Include="Cheats\ActionReplayCodesPanel.cpp">
+      <Filter>GUI\Cheats</Filter>
+    </ClCompile>
+    <ClCompile Include="Cheats\ARCodeAddEdit.cpp">
+      <Filter>GUI\Cheats</Filter>
+    </ClCompile>
+    <ClCompile Include="NetPlay\NetPlayLauncher.cpp">
+      <Filter>GUI\NetPlay</Filter>
+    </ClCompile>
+    <ClCompile Include="DolphinSlider.cpp">
+      <Filter>GUI\Widgets</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.h" />
-    <ClInclude Include="WXInputBase.h" />
+    <ClInclude Include="WxEventUtils.h" />
     <ClInclude Include="WxUtils.h" />
     <ClInclude Include="Cheats\CheatSearchTab.h">
       <Filter>GUI\Cheats</Filter>
@@ -215,6 +281,9 @@
     </ClInclude>
     <ClInclude Include="Cheats\GeckoCodeDiag.h">
       <Filter>GUI\Cheats</Filter>
+    </ClInclude>
+    <ClInclude Include="Debugger\AssemblerEntryDialog.h">
+      <Filter>GUI\Debugger</Filter>
     </ClInclude>
     <ClInclude Include="Debugger\BreakpointDlg.h">
       <Filter>GUI\Debugger</Filter>
@@ -267,7 +336,37 @@
     <ClInclude Include="NetPlay\NetWindow.h">
       <Filter>GUI\NetPlay</Filter>
     </ClInclude>
-    <ClInclude Include="InputConfigDiag.h">
+    <ClInclude Include="Input\InputConfigDiag.h">
+      <Filter>GUI\InputConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\HotkeyInputConfigDiag.h">
+      <Filter>GUI\InputConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\GCPadInputConfigDiag.h">
+      <Filter>GUI\InputConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\MicButtonConfigDiag.h">
+      <Filter>GUI\InputConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\GCKeyboardInputConfigDiag.h">
+      <Filter>GUI\InputConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\WiimoteInputConfigDiag.h">
+      <Filter>GUI\InputConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\NunchukInputConfigDiag.h">
+      <Filter>GUI\InputConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\ClassicInputConfigDiag.h">
+      <Filter>GUI\InputConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\GuitarInputConfigDiag.h">
+      <Filter>GUI\InputConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\DrumsInputConfigDiag.h">
+      <Filter>GUI\InputConfig</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\TurntableInputConfigDiag.h">
       <Filter>GUI\InputConfig</Filter>
     </ClInclude>
     <ClInclude Include="Debugger\DebuggerPanel.h">
@@ -288,9 +387,6 @@
     <ClInclude Include="AboutDolphin.h">
       <Filter>GUI</Filter>
     </ClInclude>
-    <ClInclude Include="ARCodeAddEdit.h">
-      <Filter>GUI</Filter>
-    </ClInclude>
     <ClInclude Include="FifoPlayerDlg.h">
       <Filter>GUI</Filter>
     </ClInclude>
@@ -303,16 +399,16 @@
     <ClInclude Include="Globals.h">
       <Filter>GUI</Filter>
     </ClInclude>
-    <ClInclude Include="HotkeyDlg.h">
-      <Filter>GUI</Filter>
-    </ClInclude>
-    <ClInclude Include="ISOProperties.h">
-      <Filter>GUI</Filter>
-    </ClInclude>
     <ClInclude Include="LogConfigWindow.h">
       <Filter>GUI</Filter>
     </ClInclude>
     <ClInclude Include="LogWindow.h">
+      <Filter>GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="MainMenuBar.h">
+      <Filter>GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="MainToolBar.h">
       <Filter>GUI</Filter>
     </ClInclude>
     <ClInclude Include="MemcardManager.h">
@@ -345,14 +441,29 @@
     <ClInclude Include="Config\GameCubeConfigPane.h">
       <Filter>GUI\Config</Filter>
     </ClInclude>
+    <ClInclude Include="Config\GCAdapterConfigDiag.h">
+      <Filter>GUI\Config</Filter>
+    </ClInclude>
     <ClInclude Include="Config\WiiConfigPane.h">
       <Filter>GUI\Config</Filter>
     </ClInclude>
     <ClInclude Include="Config\PathConfigPane.h">
       <Filter>GUI\Config</Filter>
     </ClInclude>
+    <ClInclude Include="Config\AddUSBDeviceDiag.h">
+      <Filter>GUI\Config</Filter>
+    </ClInclude>
     <ClInclude Include="Config\AdvancedConfigPane.h">
       <Filter>GUI\Config</Filter>
+    </ClInclude>
+    <ClInclude Include="ISOProperties\FilesystemPanel.h">
+      <Filter>GUI\ISOProperties</Filter>
+    </ClInclude>
+    <ClInclude Include="ISOProperties\InfoPanel.h">
+      <Filter>GUI\ISOProperties</Filter>
+    </ClInclude>
+    <ClInclude Include="ISOProperties\ISOProperties.h">
+      <Filter>GUI\ISOProperties</Filter>
     </ClInclude>
     <ClInclude Include="NetPlay\NetPlaySetupFrame.h">
       <Filter>GUI\NetPlay</Filter>
@@ -360,8 +471,23 @@
     <ClInclude Include="NetPlay\ChangeGameDialog.h">
       <Filter>GUI\NetPlay</Filter>
     </ClInclude>
+    <ClInclude Include="NetPlay\MD5Dialog.h">
+      <Filter>GUI\NetPlay</Filter>
+    </ClInclude>
     <ClInclude Include="NetPlay\PadMapDialog.h">
       <Filter>GUI\NetPlay</Filter>
+    </ClInclude>
+    <ClInclude Include="Cheats\ActionReplayCodesPanel.h">
+      <Filter>GUI\Cheats</Filter>
+    </ClInclude>
+    <ClInclude Include="Cheats\ARCodeAddEdit.h">
+      <Filter>GUI\Cheats</Filter>
+    </ClInclude>
+    <ClInclude Include="NetPlay\NetPlayLauncher.h">
+      <Filter>GUI\NetPlay</Filter>
+    </ClInclude>
+    <ClInclude Include="DolphinSlider.h">
+      <Filter>GUI\Widgets</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

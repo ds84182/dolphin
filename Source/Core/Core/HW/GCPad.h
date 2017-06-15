@@ -8,19 +8,25 @@
 #include "InputCommon/ControllerInterface/Device.h"
 
 class InputConfig;
+enum class PadGroup;
 struct GCPadStatus;
+
+namespace ControllerEmu
+{
+class ControlGroup;
+}
 
 namespace Pad
 {
-
 void Shutdown();
-void Initialize(void* const hwnd);
+void Initialize();
 void LoadConfig();
 
 InputConfig* GetConfig();
 
-void GetStatus(u8 _numPAD, GCPadStatus* _pPADStatus);
-void Rumble(u8 _numPAD, const ControlState strength);
+GCPadStatus GetStatus(int pad_num);
+ControllerEmu::ControlGroup* GetGroup(int pad_num, PadGroup group);
+void Rumble(int pad_num, ControlState strength);
 
-bool GetMicButton(u8 pad);
+bool GetMicButton(int pad_num);
 }

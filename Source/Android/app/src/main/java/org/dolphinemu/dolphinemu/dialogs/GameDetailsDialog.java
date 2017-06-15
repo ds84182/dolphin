@@ -1,14 +1,12 @@
 package org.dolphinemu.dolphinemu.dialogs;
 
-
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
-import android.content.Intent;
 import android.os.Bundle;
+import android.support.design.widget.FloatingActionButton;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -61,27 +59,28 @@ public final class GameDetailsDialog extends DialogFragment
 		TextView textCountry = (TextView) contents.findViewById(R.id.text_country);
 		TextView textDate = (TextView) contents.findViewById(R.id.text_date);
 
-		ImageButton buttonLaunch = (ImageButton) contents.findViewById(R.id.button_launch);
+		FloatingActionButton buttonLaunch = (FloatingActionButton) contents.findViewById(R.id.button_launch);
 
 		int countryIndex = getArguments().getInt(ARGUMENT_GAME_COUNTRY);
-		String country = getResources().getStringArray(R.array.country_names)[countryIndex];
+		String country = getResources().getStringArray(R.array.countryNames)[countryIndex];
 
 		textTitle.setText(getArguments().getString(ARGUMENT_GAME_TITLE));
 		textDescription.setText(getArguments().getString(ARGUMENT_GAME_DESCRIPTION));
 		textCountry.setText(country);
 		textDate.setText(getArguments().getString(ARGUMENT_GAME_DATE));
+
 		buttonLaunch.setOnClickListener(new View.OnClickListener()
 		{
 			@Override
 			public void onClick(View view)
 			{
 				// Start the emulation activity and send the path of the clicked ROM to it.
-				Intent intent = new Intent(view.getContext(), EmulationActivity.class);
-
-				intent.putExtra("SelectedGame", getArguments().getString(ARGUMENT_GAME_PATH));
-				intent.putExtra("SelectedTitle", getArguments().getString(ARGUMENT_GAME_TITLE));
-
-				startActivity(intent);
+				EmulationActivity.launch(getActivity(),
+						getArguments().getString(ARGUMENT_GAME_PATH),
+						getArguments().getString(ARGUMENT_GAME_TITLE),
+						getArguments().getString(ARGUMENT_GAME_SCREENSHOT_PATH),
+						-1,
+						imageGameScreen);
 			}
 		});
 

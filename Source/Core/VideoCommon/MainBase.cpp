@@ -2,261 +2,254 @@
 // Licensed under GPLv2+
 // Refer to the license.txt file included.
 
-#include "Common/Event.h"
-#include "Core/ConfigManager.h"
+#include <cstring>
 
+#include "Common/ChunkFile.h"
+#include "Common/CommonTypes.h"
+#include "Common/Event.h"
+#include "Common/Flag.h"
+#include "Common/Logging/Log.h"
+#include "Core/Host.h"
 #include "VideoCommon/AsyncRequests.h"
-#include "VideoCommon/BoundingBox.h"
 #include "VideoCommon/BPStructs.h"
+#include "VideoCommon/CPMemory.h"
 #include "VideoCommon/CommandProcessor.h"
 #include "VideoCommon/Fifo.h"
-#include "VideoCommon/FramebufferManagerBase.h"
-#include "VideoCommon/MainBase.h"
+#include "VideoCommon/GeometryShaderManager.h"
+#include "VideoCommon/IndexGenerator.h"
 #include "VideoCommon/OnScreenDisplay.h"
+#include "VideoCommon/OpcodeDecoding.h"
 #include "VideoCommon/PixelEngine.h"
+#include "VideoCommon/PixelShaderManager.h"
 #include "VideoCommon/RenderBase.h"
 #include "VideoCommon/TextureCacheBase.h"
 #include "VideoCommon/VertexLoaderManager.h"
+#include "VideoCommon/VertexShaderManager.h"
 #include "VideoCommon/VideoBackendBase.h"
 #include "VideoCommon/VideoConfig.h"
 #include "VideoCommon/VideoState.h"
-
-bool s_BackendInitialized = false;
 
 static Common::Flag s_FifoShuttingDown;
 
 static volatile struct
 {
-	u32 xfbAddr;
-	u32 fbWidth;
-	u32 fbStride;
-	u32 fbHeight;
+  u32 xfbAddr;
+  u32 fbWidth;
+  u32 fbStride;
+  u32 fbHeight;
 } s_beginFieldArgs;
 
-void VideoBackendHardware::EmuStateChange(EMUSTATE_CHANGE newState)
+void VideoBackendBase::Video_ExitLoop()
 {
-	EmulatorState((newState == EMUSTATE_CHANGE_PLAY) ? true : false);
-}
-
-// Enter and exit the video loop
-void VideoBackendHardware::Video_EnterLoop()
-{
-	RunGpuLoop();
-}
-
-void VideoBackendHardware::Video_ExitLoop()
-{
-	ExitGpuLoop();
-	s_FifoShuttingDown.Set();
-}
-
-void VideoBackendHardware::Video_SetRendering(bool bEnabled)
-{
-	Fifo_SetRendering(bEnabled);
+  Fifo::ExitGpuLoop();
+  s_FifoShuttingDown.Set();
 }
 
 // Run from the CPU thread (from VideoInterface.cpp)
-void VideoBackendHardware::Video_BeginField(u32 xfbAddr, u32 fbWidth, u32 fbStride, u32 fbHeight)
+void VideoBackendBase::Video_BeginField(u32 xfbAddr, u32 fbWidth, u32 fbStride, u32 fbHeight,
+                                        u64 ticks)
 {
-	if (s_BackendInitialized && g_ActiveConfig.bUseXFB)
-	{
-		s_beginFieldArgs.xfbAddr = xfbAddr;
-		s_beginFieldArgs.fbWidth = fbWidth;
-		s_beginFieldArgs.fbStride = fbStride;
-		s_beginFieldArgs.fbHeight = fbHeight;
-	}
+  if (m_initialized && g_ActiveConfig.bUseXFB && g_renderer)
+  {
+    Fifo::SyncGPU(Fifo::SyncGPUReason::Swap);
+
+    AsyncRequests::Event e;
+    e.time = ticks;
+    e.type = AsyncRequests::Event::SWAP_EVENT;
+
+    e.swap_event.xfbAddr = xfbAddr;
+    e.swap_event.fbWidth = fbWidth;
+    e.swap_event.fbStride = fbStride;
+    e.swap_event.fbHeight = fbHeight;
+    AsyncRequests::GetInstance()->PushEvent(e, false);
+  }
 }
 
-// Run from the CPU thread (from VideoInterface.cpp)
-void VideoBackendHardware::Video_EndField()
+u32 VideoBackendBase::Video_AccessEFB(EFBAccessType type, u32 x, u32 y, u32 InputData)
 {
-	if (s_BackendInitialized && g_ActiveConfig.bUseXFB && g_renderer)
-	{
-		SyncGPU(SYNC_GPU_SWAP);
+  if (!g_ActiveConfig.bEFBAccessEnable)
+  {
+    return 0;
+  }
 
-		AsyncRequests::Event e;
-		e.time = 0;
-		e.type = AsyncRequests::Event::SWAP_EVENT;
-
-		e.swap_event.xfbAddr = s_beginFieldArgs.xfbAddr;
-		e.swap_event.fbWidth = s_beginFieldArgs.fbWidth;
-		e.swap_event.fbStride = s_beginFieldArgs.fbStride;
-		e.swap_event.fbHeight = s_beginFieldArgs.fbHeight;
-		AsyncRequests::GetInstance()->PushEvent(e, false);
-	}
+  if (type == EFBAccessType::PokeColor || type == EFBAccessType::PokeZ)
+  {
+    AsyncRequests::Event e;
+    e.type = type == EFBAccessType::PokeColor ? AsyncRequests::Event::EFB_POKE_COLOR :
+                                                AsyncRequests::Event::EFB_POKE_Z;
+    e.time = 0;
+    e.efb_poke.data = InputData;
+    e.efb_poke.x = x;
+    e.efb_poke.y = y;
+    AsyncRequests::GetInstance()->PushEvent(e, false);
+    return 0;
+  }
+  else
+  {
+    AsyncRequests::Event e;
+    u32 result;
+    e.type = type == EFBAccessType::PeekColor ? AsyncRequests::Event::EFB_PEEK_COLOR :
+                                                AsyncRequests::Event::EFB_PEEK_Z;
+    e.time = 0;
+    e.efb_peek.x = x;
+    e.efb_peek.y = y;
+    e.efb_peek.data = &result;
+    AsyncRequests::GetInstance()->PushEvent(e, true);
+    return result;
+  }
 }
 
-void VideoBackendHardware::Video_AddMessage(const std::string& msg, u32 milliseconds)
+u32 VideoBackendBase::Video_GetQueryResult(PerfQueryType type)
 {
-	OSD::AddMessage(msg, milliseconds);
+  if (!g_perf_query->ShouldEmulate())
+  {
+    return 0;
+  }
+
+  Fifo::SyncGPU(Fifo::SyncGPUReason::PerfQuery);
+
+  AsyncRequests::Event e;
+  e.time = 0;
+  e.type = AsyncRequests::Event::PERF_QUERY;
+
+  if (!g_perf_query->IsFlushed())
+    AsyncRequests::GetInstance()->PushEvent(e, true);
+
+  return g_perf_query->GetQueryResult(type);
 }
 
-void VideoBackendHardware::Video_ClearMessages()
+u16 VideoBackendBase::Video_GetBoundingBox(int index)
 {
-	OSD::ClearMessages();
+  if (!g_ActiveConfig.bBBoxEnable)
+  {
+    static bool warn_once = true;
+    if (warn_once)
+      ERROR_LOG(VIDEO, "BBox shall be used but it is disabled. Please use a gameini to enable it "
+                       "for this game.");
+    warn_once = false;
+    return 0;
+  }
+
+  if (!g_ActiveConfig.backend_info.bSupportsBBox)
+  {
+    static bool warn_once = true;
+    if (warn_once)
+      PanicAlertT("This game requires bounding box emulation to run properly but your graphics "
+                  "card or its drivers do not support it. As a result you will experience bugs or "
+                  "freezes while running this game.");
+    warn_once = false;
+    return 0;
+  }
+
+  Fifo::SyncGPU(Fifo::SyncGPUReason::BBox);
+
+  AsyncRequests::Event e;
+  u16 result;
+  e.time = 0;
+  e.type = AsyncRequests::Event::BBOX_READ;
+  e.bbox.index = index;
+  e.bbox.data = &result;
+  AsyncRequests::GetInstance()->PushEvent(e, true);
+
+  return result;
 }
 
-// Screenshot
-bool VideoBackendHardware::Video_Screenshot(const std::string& filename)
+void VideoBackendBase::ShowConfig(void* parent_handle)
 {
-	Renderer::SetScreenshot(filename.c_str());
-	return true;
+  if (!m_initialized)
+    InitBackendInfo();
+
+  Host_ShowVideoConfig(parent_handle, GetDisplayName());
 }
 
-u32 VideoBackendHardware::Video_AccessEFB(EFBAccessType type, u32 x, u32 y, u32 InputData)
+void VideoBackendBase::InitializeShared()
 {
-	if (!g_ActiveConfig.bEFBAccessEnable)
-	{
-		return 0;
-	}
+  memset(&g_main_cp_state, 0, sizeof(g_main_cp_state));
+  memset(&g_preprocess_cp_state, 0, sizeof(g_preprocess_cp_state));
+  memset(texMem, 0, TMEM_SIZE);
 
-	if (type == POKE_COLOR || type == POKE_Z)
-	{
-		AsyncRequests::Event e;
-		e.type = type == POKE_COLOR ? AsyncRequests::Event::EFB_POKE_COLOR : AsyncRequests::Event::EFB_POKE_Z;
-		e.time = 0;
-		e.efb_poke.data = InputData;
-		e.efb_poke.x = x;
-		e.efb_poke.y = y;
-		AsyncRequests::GetInstance()->PushEvent(e, false);
-		return 0;
-	}
-	else
-	{
-		AsyncRequests::Event e;
-		u32 result;
-		e.type = type == PEEK_COLOR ? AsyncRequests::Event::EFB_PEEK_COLOR : AsyncRequests::Event::EFB_PEEK_Z;
-		e.time = 0;
-		e.efb_peek.x = x;
-		e.efb_peek.y = y;
-		e.efb_peek.data = &result;
-		AsyncRequests::GetInstance()->PushEvent(e, true);
-		return result;
-	}
+  // Do our OSD callbacks
+  OSD::DoCallbacks(OSD::CallbackType::Initialization);
+
+  // do not initialize again for the config window
+  m_initialized = true;
+
+  s_FifoShuttingDown.Clear();
+  memset((void*)&s_beginFieldArgs, 0, sizeof(s_beginFieldArgs));
+  m_invalid = false;
+  frameCount = 0;
+
+  CommandProcessor::Init();
+  Fifo::Init();
+  OpcodeDecoder::Init();
+  PixelEngine::Init();
+  BPInit();
+  VertexLoaderManager::Init();
+  IndexGenerator::Init();
+  VertexShaderManager::Init();
+  GeometryShaderManager::Init();
+  PixelShaderManager::Init();
+
+  g_Config.Refresh();
+  g_Config.UpdateProjectionHack();
+  g_Config.VerifyValidity();
+  UpdateActiveConfig();
+
+  // Notify the core that the video backend is ready
+  Host_Message(WM_USER_CREATE);
 }
 
-u32 VideoBackendHardware::Video_GetQueryResult(PerfQueryType type)
+void VideoBackendBase::ShutdownShared()
 {
-	if (!g_perf_query->ShouldEmulate())
-	{
-		return 0;
-	}
+  // Do our OSD callbacks
+  OSD::DoCallbacks(OSD::CallbackType::Shutdown);
 
-	SyncGPU(SYNC_GPU_PERFQUERY);
+  m_initialized = false;
 
-	AsyncRequests::Event e;
-	e.time = 0;
-	e.type = AsyncRequests::Event::PERF_QUERY;
-
-	if (!g_perf_query->IsFlushed())
-		AsyncRequests::GetInstance()->PushEvent(e, true);
-
-	return g_perf_query->GetQueryResult(type);
+  Fifo::Shutdown();
 }
 
-u16 VideoBackendHardware::Video_GetBoundingBox(int index)
+void VideoBackendBase::CleanupShared()
 {
-	if (!g_ActiveConfig.backend_info.bSupportsBBox)
-		return 0;
-
-	if (!g_ActiveConfig.bBBoxEnable)
-	{
-		static bool warn_once = true;
-		if (warn_once)
-			ERROR_LOG(VIDEO, "BBox shall be used but it is disabled. Please use a gameini to enable it for this game.");
-		warn_once = false;
-		return 0;
-	}
-
-	SyncGPU(SYNC_GPU_BBOX);
-
-	AsyncRequests::Event e;
-	u16 result;
-	e.time = 0;
-	e.type = AsyncRequests::Event::BBOX_READ;
-	e.bbox.index = index;
-	e.bbox.data = &result;
-	AsyncRequests::GetInstance()->PushEvent(e, true);
-
-	return result;
-}
-
-void VideoBackendHardware::InitializeShared()
-{
-	VideoCommon_Init();
-
-	s_FifoShuttingDown.Clear();
-	memset((void*)&s_beginFieldArgs, 0, sizeof(s_beginFieldArgs));
-	m_invalid = false;
+  VertexLoaderManager::Clear();
 }
 
 // Run from the CPU thread
-void VideoBackendHardware::DoState(PointerWrap& p)
+void VideoBackendBase::DoState(PointerWrap& p)
 {
-	bool software = false;
-	p.Do(software);
+  bool software = false;
+  p.Do(software);
 
-	if (p.GetMode() == PointerWrap::MODE_READ && software == true)
-	{
-		// change mode to abort load of incompatible save state.
-		p.SetMode(PointerWrap::MODE_VERIFY);
-	}
+  if (p.GetMode() == PointerWrap::MODE_READ && software == true)
+  {
+    // change mode to abort load of incompatible save state.
+    p.SetMode(PointerWrap::MODE_VERIFY);
+  }
 
-	VideoCommon_DoState(p);
-	p.DoMarker("VideoCommon");
+  VideoCommon_DoState(p);
+  p.DoMarker("VideoCommon");
 
-	p.Do(s_beginFieldArgs);
-	p.DoMarker("VideoBackendHardware");
+  p.Do(s_beginFieldArgs);
+  p.DoMarker("VideoBackendBase");
 
-	// Refresh state.
-	if (p.GetMode() == PointerWrap::MODE_READ)
-	{
-		m_invalid = true;
+  // Refresh state.
+  if (p.GetMode() == PointerWrap::MODE_READ)
+  {
+    m_invalid = true;
 
-		// Clear all caches that touch RAM
-		// (? these don't appear to touch any emulation state that gets saved. moved to on load only.)
-		VertexLoaderManager::MarkAllDirty();
-	}
+    // Clear all caches that touch RAM
+    // (? these don't appear to touch any emulation state that gets saved. moved to on load only.)
+    VertexLoaderManager::MarkAllDirty();
+  }
 }
 
-void VideoBackendHardware::CheckInvalidState()
+void VideoBackendBase::CheckInvalidState()
 {
-	if (m_invalid)
-	{
-		m_invalid = false;
+  if (m_invalid)
+  {
+    m_invalid = false;
 
-		BPReload();
-		TextureCache::Invalidate();
-	}
+    BPReload();
+    g_texture_cache->Invalidate();
+  }
 }
-
-void VideoBackendHardware::PauseAndLock(bool doLock, bool unpauseOnUnlock)
-{
-	Fifo_PauseAndLock(doLock, unpauseOnUnlock);
-}
-
-void VideoBackendHardware::RunLoop(bool enable)
-{
-	VideoCommon_RunLoop(enable);
-}
-
-void VideoBackendHardware::Video_GatherPipeBursted()
-{
-	CommandProcessor::GatherPipeBursted();
-}
-
-void VideoBackendHardware::Video_Sync()
-{
-	FlushGpu();
-}
-
-void VideoBackendHardware::RegisterCPMMIO(MMIO::Mapping* mmio, u32 base)
-{
-	CommandProcessor::RegisterMMIO(mmio, base);
-}
-
-void VideoBackendHardware::UpdateWantDeterminism(bool want)
-{
-	Fifo_UpdateWantDeterminism(want);
-}
-

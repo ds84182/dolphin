@@ -2,160 +2,171 @@
 // Licensed under GPLv2+
 // Refer to the license.txt file included.
 
-#include "Common/ChunkFile.h"
-#include "Common/CommonFuncs.h"
-#include "Common/CommonTypes.h"
-
 #include "Core/HW/GPFifo.h"
+
+#include <cstddef>
+#include <cstring>
+
+#include "Common/ChunkFile.h"
+#include "Common/CommonTypes.h"
+#include "Common/Swap.h"
 #include "Core/HW/Memmap.h"
 #include "Core/HW/ProcessorInterface.h"
 #include "Core/PowerPC/JitInterface.h"
-#include "Core/PowerPC/PowerPC.h"
-
-#include "VideoCommon/VideoBackendBase.h"
+#include "VideoCommon/CommandProcessor.h"
 
 namespace GPFifo
 {
-
 // 32 Byte gather pipe with extra space
 // Overfilling is no problem (up to the real limit), CheckGatherPipe will blast the
 // contents in nicely sized chunks
-
+//
 // Other optimizations to think about:
-
-// If the gp is NOT linked to the fifo, just blast to memory byte by word
-// If the gp IS linked to the fifo, use a fast wrapping buffer and skip writing to memory
-
+// - If the GP is NOT linked to the FIFO, just blast to memory byte by word
+// - If the GP IS linked to the FIFO, use a fast wrapping buffer and skip writing to memory
+//
 // Both of these should actually work! Only problem is that we have to decide at run time,
 // the same function could use both methods. Compile 2 different versions of each such block?
 
-u8 GC_ALIGNED32(m_gatherPipe[GATHER_PIPE_SIZE*16]); //more room, for the fastmodes
+// More room for the fastmodes
+alignas(32) static u8 s_gather_pipe[GATHER_PIPE_SIZE * 16];
 
-// pipe counter
-u32 m_gatherPipeCount = 0;
+// pipe pointer
+u8* g_gather_pipe_ptr = s_gather_pipe;
 
-void DoState(PointerWrap &p)
+static size_t GetGatherPipeCount()
 {
-	p.Do(m_gatherPipe);
-	p.Do(m_gatherPipeCount);
+  return g_gather_pipe_ptr - s_gather_pipe;
+}
+
+static void SetGatherPipeCount(size_t size)
+{
+  g_gather_pipe_ptr = s_gather_pipe + size;
+}
+
+void DoState(PointerWrap& p)
+{
+  p.Do(s_gather_pipe);
+  u32 pipe_count = static_cast<u32>(GetGatherPipeCount());
+  p.Do(pipe_count);
+  SetGatherPipeCount(pipe_count);
 }
 
 void Init()
 {
-	ResetGatherPipe();
-	memset(m_gatherPipe, 0, sizeof(m_gatherPipe));
+  ResetGatherPipe();
+  memset(s_gather_pipe, 0, sizeof(s_gather_pipe));
 }
 
 bool IsEmpty()
 {
-	return m_gatherPipeCount == 0;
+  return GetGatherPipeCount() == 0;
 }
 
 void ResetGatherPipe()
 {
-	m_gatherPipeCount = 0;
+  SetGatherPipeCount(0);
 }
 
 static void UpdateGatherPipe()
 {
-	u32 cnt;
-	u8* curMem = Memory::GetPointer(ProcessorInterface::Fifo_CPUWritePointer);
-	for (cnt = 0; m_gatherPipeCount >= GATHER_PIPE_SIZE; cnt += GATHER_PIPE_SIZE)
-	{
-		// copy the GatherPipe
-		memcpy(curMem, m_gatherPipe + cnt, GATHER_PIPE_SIZE);
-		m_gatherPipeCount -= GATHER_PIPE_SIZE;
+  size_t pipe_count = GetGatherPipeCount();
+  size_t processed;
+  u8* cur_mem = Memory::GetPointer(ProcessorInterface::Fifo_CPUWritePointer);
+  for (processed = 0; pipe_count >= GATHER_PIPE_SIZE; processed += GATHER_PIPE_SIZE)
+  {
+    // copy the GatherPipe
+    memcpy(cur_mem, s_gather_pipe + processed, GATHER_PIPE_SIZE);
+    pipe_count -= GATHER_PIPE_SIZE;
 
-		// increase the CPUWritePointer
-		if (ProcessorInterface::Fifo_CPUWritePointer == ProcessorInterface::Fifo_CPUEnd)
-		{
-			ProcessorInterface::Fifo_CPUWritePointer = ProcessorInterface::Fifo_CPUBase;
-			curMem = Memory::GetPointer(ProcessorInterface::Fifo_CPUWritePointer);
-		}
-		else
-		{
-			curMem += GATHER_PIPE_SIZE;
-			ProcessorInterface::Fifo_CPUWritePointer += GATHER_PIPE_SIZE;
-		}
+    // increase the CPUWritePointer
+    if (ProcessorInterface::Fifo_CPUWritePointer == ProcessorInterface::Fifo_CPUEnd)
+    {
+      ProcessorInterface::Fifo_CPUWritePointer = ProcessorInterface::Fifo_CPUBase;
+      cur_mem = Memory::GetPointer(ProcessorInterface::Fifo_CPUWritePointer);
+    }
+    else
+    {
+      cur_mem += GATHER_PIPE_SIZE;
+      ProcessorInterface::Fifo_CPUWritePointer += GATHER_PIPE_SIZE;
+    }
 
-		g_video_backend->Video_GatherPipeBursted();
-	}
+    CommandProcessor::GatherPipeBursted();
+  }
 
-	// move back the spill bytes
-	memmove(m_gatherPipe, m_gatherPipe + cnt, m_gatherPipeCount);
+  // move back the spill bytes
+  memmove(s_gather_pipe, s_gather_pipe + processed, pipe_count);
+  SetGatherPipeCount(pipe_count);
 }
 
 void FastCheckGatherPipe()
 {
-	if (m_gatherPipeCount >= GATHER_PIPE_SIZE)
-	{
-		UpdateGatherPipe();
-	}
+  if (GetGatherPipeCount() >= GATHER_PIPE_SIZE)
+  {
+    UpdateGatherPipe();
+  }
 }
 
 void CheckGatherPipe()
 {
-	if (m_gatherPipeCount >= GATHER_PIPE_SIZE)
-	{
-		UpdateGatherPipe();
+  if (GetGatherPipeCount() >= GATHER_PIPE_SIZE)
+  {
+    UpdateGatherPipe();
 
-		// Profile where slow FIFO writes are occurring.
-		JitInterface::CompileExceptionCheck(JitInterface::ExceptionType::EXCEPTIONS_FIFO_WRITE);
-	}
+    // Profile where slow FIFO writes are occurring.
+    JitInterface::CompileExceptionCheck(JitInterface::ExceptionType::FIFOWrite);
+  }
 }
 
-void Write8(const u8 _iValue)
+void Write8(const u8 value)
 {
-//	LOG(GPFIFO, "GPFIFO #%x: 0x%02x",ProcessorInterface::Fifo_CPUWritePointer+m_gatherPipeCount, _iValue);
-	FastWrite8(_iValue);
-	CheckGatherPipe();
+  FastWrite8(value);
+  CheckGatherPipe();
 }
 
-void Write16(const u16 _iValue)
+void Write16(const u16 value)
 {
-//	LOG(GPFIFO, "GPFIFO #%x: 0x%04x",ProcessorInterface::Fifo_CPUWritePointer+m_gatherPipeCount, _iValue);
-	FastWrite16(_iValue);
-	CheckGatherPipe();
+  FastWrite16(value);
+  CheckGatherPipe();
 }
 
-void Write32(const u32 _iValue)
+void Write32(const u32 value)
 {
-//#ifdef _DEBUG
-//	float floatvalue = *(float*)&_iValue;
-//	LOG(GPFIFO, "GPFIFO #%x: 0x%08x / %f",ProcessorInterface::Fifo_CPUWritePointer+m_gatherPipeCount, _iValue, floatvalue);
-//#endif
-	FastWrite32(_iValue);
-	CheckGatherPipe();
+  FastWrite32(value);
+  CheckGatherPipe();
 }
 
-void Write64(const u64 _iValue)
+void Write64(const u64 value)
 {
-	FastWrite64(_iValue);
-	CheckGatherPipe();
+  FastWrite64(value);
+  CheckGatherPipe();
 }
 
-void FastWrite8(const u8 _iValue)
+void FastWrite8(const u8 value)
 {
-	m_gatherPipe[m_gatherPipeCount] = _iValue;
-	++m_gatherPipeCount;
+  *g_gather_pipe_ptr = value;
+  g_gather_pipe_ptr += sizeof(u8);
 }
 
-void FastWrite16(const u16 _iValue)
+void FastWrite16(u16 value)
 {
-	*(u16*)(&m_gatherPipe[m_gatherPipeCount]) = Common::swap16(_iValue);
-	m_gatherPipeCount += 2;
+  value = Common::swap16(value);
+  std::memcpy(g_gather_pipe_ptr, &value, sizeof(u16));
+  g_gather_pipe_ptr += sizeof(u16);
 }
 
-void FastWrite32(const u32 _iValue)
+void FastWrite32(u32 value)
 {
-	*(u32*)(&m_gatherPipe[m_gatherPipeCount]) = Common::swap32(_iValue);
-	m_gatherPipeCount += 4;
+  value = Common::swap32(value);
+  std::memcpy(g_gather_pipe_ptr, &value, sizeof(u32));
+  g_gather_pipe_ptr += sizeof(u32);
 }
 
-void FastWrite64(const u64 _iValue)
+void FastWrite64(u64 value)
 {
-	*(u64*)(&m_gatherPipe[m_gatherPipeCount]) = Common::swap64(_iValue);
-	m_gatherPipeCount += 8;
+  value = Common::swap64(value);
+  std::memcpy(g_gather_pipe_ptr, &value, sizeof(u64));
+  g_gather_pipe_ptr += sizeof(u64);
 }
 
-} // end of namespace GPFifo
+}  // end of namespace GPFifo

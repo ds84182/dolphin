@@ -1,3 +1,29 @@
+Legal GC/WII DSP IROM replacement (v0.3)
+-------------------------------------------------------
+
+- coef: Explicitly set 23 different values that are used by GBA UCode, and
+  tweaked overall parameters to more closely match those 23 values.
+- irom: Moved a few functions to their proper places, updated BootUCode to
+  configure DMA transfers using AX registers as well as IX registers (the GBA
+  UCode uses this to do two sequential transfers in one call), and added
+  partial functions used by GBA UCode.
+
+ligfx
+2/june/2017
+
+Legal GC/WII DSP IROM replacement (v0.2.1)
+-------------------------------------------------------
+
+- coef: 4-tap polyphase FIR filters
+- irom: unchanged
+
+Coefficients are roughly equivalent to those in the official DROM.
+Improves resampling quality greatly over linear interpolation.
+See generate_coefs.py for details.
+
+stgn
+29/june/2015
+
 Legal GC/WII DSP IROM replacement (v0.2)
 -------------------------------------------------------
 

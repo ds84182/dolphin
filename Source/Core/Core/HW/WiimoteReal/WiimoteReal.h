@@ -4,163 +4,171 @@
 
 #pragma once
 
-#include <condition_variable>
+#include <atomic>
 #include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "Common/Common.h"
+#include "Common/Event.h"
 #include "Common/FifoQueue.h"
-#include "Common/Timer.h"
+#include "Common/Flag.h"
+#include "Common/NonCopyable.h"
 #include "Core/HW/Wiimote.h"
-#include "Core/HW/WiimoteEmu/WiimoteEmu.h"
-#include "Core/HW/WiimoteReal/WiimoteRealBase.h"
-#include "InputCommon/InputConfig.h"
+#include "Core/HW/WiimoteCommon/WiimoteConstants.h"
+#include "Core/HW/WiimoteCommon/WiimoteHid.h"
+#include "Core/HW/WiimoteCommon/WiimoteReport.h"
 
 class PointerWrap;
 
-typedef std::vector<u8> Report;
-
 namespace WiimoteReal
 {
-
 class Wiimote : NonCopyable
 {
-friend class WiimoteEmu::Wiimote;
 public:
-	virtual ~Wiimote() {}
-	// This needs to be called in derived destructors!
-	void Shutdown();
+  virtual ~Wiimote() {}
+  // This needs to be called in derived destructors!
+  void Shutdown();
 
-	void ControlChannel(const u16 channel, const void* const data, const u32 size);
-	void InterruptChannel(const u16 channel, const void* const data, const u32 size);
-	void Update();
+  virtual std::string GetId() const = 0;
 
-	const Report& ProcessReadQueue();
+  void ControlChannel(const u16 channel, const void* const data, const u32 size);
+  void InterruptChannel(const u16 channel, const void* const data, const u32 size);
+  void Update();
+  void ConnectOnInput();
 
-	bool Read();
-	bool Write();
+  Report& ProcessReadQueue();
 
-	void StartThread();
-	void StopThread();
+  void Read();
+  bool Write();
 
-	// "handshake" / stop packets
-	void EmuStart();
-	void EmuStop();
-	void EmuResume();
-	void EmuPause();
+  bool IsBalanceBoard();
 
-	virtual void EnablePowerAssertionInternal() {}
-	virtual void DisablePowerAssertionInternal() {}
+  void StartThread();
+  void StopThread();
 
-	// connecting and disconnecting from physical devices
-	// (using address inserted by FindWiimotes)
-	// these are called from the Wiimote's thread.
-	virtual bool ConnectInternal() = 0;
-	virtual void DisconnectInternal() = 0;
+  // "handshake" / stop packets
+  void EmuStart();
+  void EmuStop();
+  void EmuResume();
+  void EmuPause();
 
-	bool Connect();
+  virtual void EnablePowerAssertionInternal() {}
+  virtual void DisablePowerAssertionInternal() {}
+  // connecting and disconnecting from physical devices
+  // (using address inserted by FindWiimotes)
+  // these are called from the Wiimote's thread.
+  virtual bool ConnectInternal() = 0;
+  virtual void DisconnectInternal() = 0;
 
-	// TODO: change to something like IsRelevant
-	virtual bool IsConnected() const = 0;
+  bool Connect(int index);
 
-	void Prepare(int index);
-	bool PrepareOnThread();
+  // TODO: change to something like IsRelevant
+  virtual bool IsConnected() const = 0;
 
-	void DisableDataReporting();
-	void EnableDataReporting(u8 mode);
-	void SetChannel(u16 channel);
+  void Prepare();
+  bool PrepareOnThread();
 
-	void QueueReport(u8 rpt_id, const void* data, unsigned int size);
+  void DisableDataReporting();
+  void EnableDataReporting(u8 mode);
+  void SetChannel(u16 channel);
 
-	int m_index;
+  void QueueReport(u8 rpt_id, const void* data, unsigned int size);
+
+  int GetIndex() const;
 
 protected:
-	Wiimote();
-	Report m_last_input_report;
-	u16 m_channel;
+  Wiimote();
+  int m_index;
+  Report m_last_input_report;
+  u16 m_channel;
+  u8 m_last_connect_request_counter;
+  // If true, the Wiimote will be really disconnected when it is disconnected by Dolphin.
+  // In any other case, data reporting is not paused to allow reconnecting on any button press.
+  // This is not enabled on all platforms as connecting a Wiimote can be a pain on some platforms.
+  bool m_really_disconnect = false;
 
 private:
-	void ClearReadQueue();
-	void WriteReport(Report rpt);
+  void ClearReadQueue();
+  void WriteReport(Report rpt);
 
-	virtual int IORead(u8* buf) = 0;
-	virtual int IOWrite(u8 const* buf, size_t len) = 0;
-	virtual void IOWakeup() = 0;
+  virtual int IORead(u8* buf) = 0;
+  virtual int IOWrite(u8 const* buf, size_t len) = 0;
+  virtual void IOWakeup() = 0;
 
-	void ThreadFunc();
-	void SetReady();
-	void WaitReady();
+  void ThreadFunc();
 
-	bool m_rumble_state;
+  bool m_rumble_state;
 
-	std::thread               m_wiimote_thread;
-	// Whether to keep running the thread.
-	volatile bool             m_run_thread;
-	// Whether to call PrepareOnThread.
-	volatile bool             m_need_prepare;
-	// Whether the thread has finished ConnectInternal.
-	volatile bool             m_thread_ready;
-	std::mutex                m_thread_ready_mutex;
-	std::condition_variable   m_thread_ready_cond;
+  std::thread m_wiimote_thread;
+  // Whether to keep running the thread.
+  Common::Flag m_run_thread;
+  // Whether to call PrepareOnThread.
+  Common::Flag m_need_prepare;
+  // Triggered when the thread has finished ConnectInternal.
+  Common::Event m_thread_ready_event;
 
-	Common::FifoQueue<Report> m_read_reports;
-	Common::FifoQueue<Report> m_write_reports;
+  Common::FifoQueue<Report> m_read_reports;
+  Common::FifoQueue<Report> m_write_reports;
+};
 
-	Common::Timer m_last_audio_report;
+class WiimoteScannerBackend
+{
+public:
+  virtual ~WiimoteScannerBackend() = default;
+  virtual bool IsReady() const = 0;
+  virtual void FindWiimotes(std::vector<Wiimote*>&, Wiimote*&) = 0;
+  // function called when not looking for more Wiimotes
+  virtual void Update() = 0;
+};
+
+enum class WiimoteScanMode
+{
+  DO_NOT_SCAN,
+  CONTINUOUSLY_SCAN,
+  SCAN_ONCE
 };
 
 class WiimoteScanner
 {
 public:
-	WiimoteScanner();
-	~WiimoteScanner();
+  WiimoteScanner() = default;
+  void StartThread();
+  void StopThread();
+  void SetScanMode(WiimoteScanMode scan_mode);
 
-	bool IsReady() const;
-
-	void WantWiimotes(bool do_want);
-	void WantBB(bool do_want);
-
-	void StartScanning();
-	void StopScanning();
-
-	void FindWiimotes(std::vector<Wiimote*>&, Wiimote*&);
-
-	// function called when not looking for more Wiimotes
-	void Update();
+  bool IsReady() const;
 
 private:
-	void ThreadFunc();
+  void ThreadFunc();
 
-	std::thread m_scan_thread;
+  std::vector<std::unique_ptr<WiimoteScannerBackend>> m_backends;
+  mutable std::mutex m_backends_mutex;
 
-	volatile bool m_run_thread;
-	volatile bool m_want_wiimotes;
-	volatile bool m_want_bb;
-
-#if defined(_WIN32)
-	void CheckDeviceType(std::basic_string<TCHAR> &devicepath, bool &real_wiimote, bool &is_bb);
-#elif defined(__linux__) && HAVE_BLUEZ
-	int device_id;
-	int device_sock;
-#endif
+  std::thread m_scan_thread;
+  Common::Flag m_scan_thread_running;
+  Common::Event m_scan_mode_changed_event;
+  std::atomic<WiimoteScanMode> m_scan_mode{WiimoteScanMode::DO_NOT_SCAN};
 };
 
-extern std::recursive_mutex g_refresh_lock;
+extern std::mutex g_wiimotes_mutex;
 extern WiimoteScanner g_wiimote_scanner;
-extern Wiimote *g_wiimotes[MAX_BBMOTES];
+extern Wiimote* g_wiimotes[MAX_BBMOTES];
 
-void InterruptChannel(int _WiimoteNumber, u16 _channelID, const void* _pData, u32 _Size);
-void ControlChannel(int _WiimoteNumber, u16 _channelID, const void* _pData, u32 _Size);
-void Update(int _WiimoteNumber);
+void InterruptChannel(int wiimote_number, u16 channel_id, const void* data, u32 size);
+void ControlChannel(int wiimote_number, u16 channel_id, const void* data, u32 size);
+void Update(int wiimote_number);
+void ConnectOnInput(int wiimote_number);
 
-void DoState(PointerWrap &p);
-void StateChange(EMUSTATE_CHANGE newState);
-
-int FindWiimotes(Wiimote** wm, int max_wiimotes);
 void ChangeWiimoteSource(unsigned int index, int source);
 
-bool IsValidBluetoothName(const std::string& name);
+bool IsValidDeviceName(const std::string& name);
 bool IsBalanceBoardName(const std::string& name);
+bool IsNewWiimote(const std::string& identifier);
 
-} // WiimoteReal
+#ifdef ANDROID
+void InitAdapterClass();
+#endif
+
+}  // WiimoteReal

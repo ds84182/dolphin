@@ -3,34 +3,35 @@
 // Refer to the license.txt file included.
 
 #include "DiscIO/Filesystem.h"
+#include <memory>
 #include "DiscIO/FileSystemGCWii.h"
+#include "DiscIO/Volume.h"
 
 namespace DiscIO
 {
+FileInfo::~FileInfo() = default;
 
-IFileSystem::IFileSystem(const IVolume *_rVolume)
-	: m_rVolume(_rVolume)
-{}
-
-
-IFileSystem::~IFileSystem()
-{}
-
-
-IFileSystem* CreateFileSystem(const IVolume* _rVolume)
+FileSystem::FileSystem(const Volume* volume, const Partition& partition)
+    : m_volume(volume), m_partition(partition)
 {
-	IFileSystem* pFileSystem = new CFileSystemGCWii(_rVolume);
-
-	if (!pFileSystem)
-		return nullptr;
-
-	if (!pFileSystem->IsValid())
-	{
-		delete pFileSystem;
-		pFileSystem = nullptr;
-	}
-
-	return pFileSystem;
 }
 
-} // namespace
+FileSystem::~FileSystem() = default;
+
+std::unique_ptr<FileSystem> CreateFileSystem(const Volume* volume, const Partition& partition)
+{
+  if (!volume)
+    return nullptr;
+
+  std::unique_ptr<FileSystem> filesystem = std::make_unique<FileSystemGCWii>(volume, partition);
+
+  if (!filesystem)
+    return nullptr;
+
+  if (!filesystem->IsValid())
+    filesystem.reset();
+
+  return filesystem;
+}
+
+}  // namespace

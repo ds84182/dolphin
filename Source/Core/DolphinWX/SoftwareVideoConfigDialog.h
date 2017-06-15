@@ -13,32 +13,29 @@
 #include <wx/dialog.h>
 
 #include "Core/ConfigManager.h"
-#include "VideoBackends/Software/SWVideoConfig.h"
 #include "VideoCommon/VideoBackendBase.h"
+#include "VideoCommon/VideoConfig.h"
 
 class SoftwareVideoConfigDialog : public wxDialog
 {
 public:
-	SoftwareVideoConfigDialog(wxWindow* parent, const std::string &title, const std::string& ininame);
-	~SoftwareVideoConfigDialog();
+  SoftwareVideoConfigDialog(wxWindow* parent, const std::string& title);
+  ~SoftwareVideoConfigDialog();
 
-	void Event_Backend(wxCommandEvent &ev)
-	{
-		VideoBackend* new_backend = g_available_video_backends[ev.GetInt()];
+  void Event_Backend(wxCommandEvent& ev)
+  {
+    auto& new_backend = g_available_video_backends[ev.GetInt()];
 
-		if (g_video_backend != new_backend)
-		{
-			Close();
+    if (g_video_backend != new_backend.get())
+    {
+      Close();
 
-			g_video_backend = new_backend;
-			SConfig::GetInstance().m_LocalCoreStartupParameter.m_strVideoBackend = g_video_backend->GetName();
+      g_video_backend = new_backend.get();
+      SConfig::GetInstance().m_strVideoBackend = g_video_backend->GetName();
 
-			g_video_backend->ShowConfig(GetParent());
-		}
-		ev.Skip();
-	}
+      g_video_backend->ShowConfig(GetParent());
+    }
 
-protected:
-	SWVideoConfig& vconfig;
-	std::string ininame;
+    ev.Skip();
+  }
 };

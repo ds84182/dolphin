@@ -6,13 +6,17 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "Common/CommonTypes.h"
 #include "DiscIO/Volume.h"
 
-namespace File { struct FSTEntry; }
+namespace File
+{
+struct FSTEntry;
+}
 
 //
 // --- this volume type is used for reading files directly from the hard drive ---
@@ -20,130 +24,138 @@ namespace File { struct FSTEntry; }
 
 namespace DiscIO
 {
+enum class BlobType;
+enum class Country;
+enum class Language;
+enum class Region;
+enum class Platform;
 
-class CVolumeDirectory : public IVolume
+class VolumeDirectory : public Volume
 {
 public:
+  VolumeDirectory(const std::string& directory, bool is_wii, const std::string& apploader = "",
+                  const std::string& dol = "");
 
-	CVolumeDirectory(const std::string& _rDirectory, bool _bIsWii,
-		const std::string& _rApploader = "", const std::string& _rDOL = "");
+  ~VolumeDirectory();
 
-	~CVolumeDirectory();
+  static bool IsValidDirectory(const std::string& directory);
 
-	static bool IsValidDirectory(const std::string& _rDirectory);
+  bool Read(u64 offset, u64 length, u8* buffer, const Partition& partition) const override;
+  std::vector<Partition> GetPartitions() const override;
+  Partition GetGamePartition() const override;
 
-	bool Read(u64 _Offset, u64 _Length, u8* _pBuffer, bool decrypt) const override;
+  std::string GetGameID(const Partition& partition = PARTITION_NONE) const override;
+  void SetGameID(const std::string& id);
 
-	std::string GetUniqueID() const override;
-	void SetUniqueID(const std::string& _ID);
+  std::string GetMakerID(const Partition& partition = PARTITION_NONE) const override;
 
-	std::string GetMakerID() const override;
+  std::optional<u16> GetRevision(const Partition& partition = PARTITION_NONE) const override
+  {
+    return {};
+  }
+  std::string GetInternalName(const Partition& partition = PARTITION_NONE) const override;
+  std::map<Language, std::string> GetLongNames() const override;
+  std::vector<u32> GetBanner(int* width, int* height) const override;
+  void SetName(const std::string&);
 
-	int GetRevision() const override { return 0; }
-	std::string GetInternalName() const override;
-	std::map<IVolume::ELanguage, std::string> GetNames() const override;
-	void SetName(const std::string&);
+  std::string GetApploaderDate(const Partition& partition = PARTITION_NONE) const override;
+  Platform GetVolumeType() const override;
 
-	u32 GetFSTSize() const override;
+  Region GetRegion() const override;
+  Country GetCountry(const Partition& partition = PARTITION_NONE) const override;
 
-	std::string GetApploaderDate() const override;
-	bool IsWiiDisc() const override;
+  BlobType GetBlobType() const override;
+  u64 GetSize() const override;
+  u64 GetRawSize() const override;
 
-	ECountry GetCountry() const override;
-
-	u64 GetSize() const override;
-	u64 GetRawSize() const override;
-
-	void BuildFST();
+  void BuildFST();
 
 private:
-	static std::string ExtractDirectoryName(const std::string& _rDirectory);
+  static std::string ExtractDirectoryName(const std::string& directory);
 
-	void SetDiskTypeWii();
-	void SetDiskTypeGC();
+  void SetDiskTypeWii();
+  void SetDiskTypeGC();
 
-	bool SetApploader(const std::string& _rApploader);
+  bool SetApploader(const std::string& apploader);
 
-	void SetDOL(const std::string& _rDOL);
+  void SetDOL(const std::string& dol);
 
-	// writing to read buffer
-	void WriteToBuffer(u64 _SrcStartAddress, u64 _SrcLength, const u8* _Src,
-					   u64& _Address, u64& _Length, u8*& _pBuffer) const;
+  // writing to read buffer
+  void WriteToBuffer(u64 source_start_address, u64 source_length, const u8* source, u64* address,
+                     u64* length, u8** buffer) const;
 
-	void PadToAddress(u64 _StartAddress, u64& _Address, u64& _Length, u8*& _pBuffer) const;
+  void PadToAddress(u64 start_address, u64* address, u64* length, u8** buffer) const;
 
-	void Write32(u32 data, u32 offset, std::vector<u8>* const buffer);
+  void Write32(u32 data, u32 offset, std::vector<u8>* const buffer);
 
-	// FST creation
-	void WriteEntryData(u32& entryOffset, u8 type, u32 nameOffset, u64 dataOffset, u32 length);
-	void WriteEntryName(u32& nameOffset, const std::string& name);
-	void WriteEntry(const File::FSTEntry& entry, u32& fstOffset, u32& nameOffset, u64& dataOffset, u32 parentEntryNum);
+  // FST creation
+  void WriteEntryData(u32* entry_offset, u8 type, u32 name_offset, u64 data_offset, u64 length,
+                      u32 address_shift);
+  void WriteEntryName(u32* name_offset, const std::string& name);
+  void WriteDirectory(const File::FSTEntry& parent_entry, u32* fst_offset, u32* name_offset,
+                      u64* data_offset, u32 parent_entry_index);
 
-	// returns number of entries found in _Directory
-	u32 AddDirectoryEntries(const std::string& _Directory, File::FSTEntry& parentEntry);
+  std::string m_root_directory;
 
-	std::string m_rootDirectory;
+  std::map<u64, std::string> m_virtual_disk;
 
-	std::map<u64, std::string> m_virtualDisk;
+  bool m_is_wii;
 
-	u32 m_totalNameSize;
+  // GameCube has no shift, Wii has 2 bit shift
+  u32 m_address_shift;
 
-	bool m_is_wii;
+  // first address on disk containing file data
+  u64 m_data_start_address;
 
-	// GameCube has no shift, Wii has 2 bit shift
-	u32 m_addressShift;
+  u64 m_fst_name_offset;
+  std::vector<u8> m_fst_data;
 
-	// first address on disk containing file data
-	u64 m_dataStartAddress;
+  std::vector<u8> m_disk_header;
 
-	u64 m_fstNameOffset;
-	std::vector<u8> m_FSTData;
+#pragma pack(push, 1)
+  struct SDiskHeaderInfo
+  {
+    u32 debug_monitor_size;
+    u32 simulated_mem_size;
+    u32 arg_offset;
+    u32 debug_flag;
+    u32 track_location;
+    u32 track_size;
+    u32 country_code;
+    u32 unknown;
+    u32 unknown2;
 
-	std::vector<u8> m_diskHeader;
+    // All the data is byteswapped
+    SDiskHeaderInfo()
+    {
+      debug_monitor_size = 0;
+      simulated_mem_size = 0;
+      arg_offset = 0;
+      debug_flag = 0;
+      track_location = 0;
+      track_size = 0;
+      country_code = 0;
+      unknown = 0;
+      unknown2 = 0;
+    }
+  };
+#pragma pack(pop)
+  std::unique_ptr<SDiskHeaderInfo> m_disk_header_info;
 
-	#pragma pack(push, 1)
-	struct SDiskHeaderInfo
-	{
-		u32 debug_mntr_size;
-		u32 simulated_mem_size;
-		u32 arg_offset;
-		u32 debug_flag;
-		u32 track_location;
-		u32 track_size;
-		u32 country_code;
-		u32 unknown;
-		u32 unknown2;
+  std::vector<u8> m_apploader;
+  std::vector<u8> m_dol;
 
-		// All the data is byteswapped
-		SDiskHeaderInfo()
-		{
-			debug_mntr_size = 0;
-			simulated_mem_size = 0;
-			arg_offset = 0;
-			debug_flag = 0;
-			track_location = 0;
-			track_size = 0;
-			country_code = 0;
-			unknown = 0;
-			unknown2 = 0;
-		}
-	};
-	#pragma pack(pop)
-	std::unique_ptr<SDiskHeaderInfo> m_diskHeaderInfo;
+  u64 m_fst_address;
+  u64 m_dol_address;
 
-	std::vector<u8> m_apploader;
-	std::vector<u8> m_DOL;
-
-	u64 m_fst_address;
-	u64 m_dol_address;
-
-	static const u8 ENTRY_SIZE = 0x0c;
-	static const u8 FILE_ENTRY = 0;
-	static const u8 DIRECTORY_ENTRY = 1;
-	static const u64 DISKHEADER_ADDRESS = 0;
-	static const u64 DISKHEADERINFO_ADDRESS = 0x440;
-	static const u64 APPLOADER_ADDRESS = 0x2440;
-	static const u32 MAX_NAME_LENGTH = 0x3df;
+  static constexpr u8 ENTRY_SIZE = 0x0c;
+  static constexpr u8 FILE_ENTRY = 0;
+  static constexpr u8 DIRECTORY_ENTRY = 1;
+  static constexpr u64 DISKHEADER_ADDRESS = 0;
+  static constexpr u64 DISKHEADERINFO_ADDRESS = 0x440;
+  static constexpr u64 APPLOADER_ADDRESS = 0x2440;
+  static const size_t MAX_NAME_LENGTH = 0x3df;
+  static const size_t MAX_ID_LENGTH = 6;
 };
 
-} // namespace
+}  // namespace

@@ -9,105 +9,86 @@
 #include <wx/textctrl.h>
 
 #include "Core/ActionReplay.h"
-#include "Core/ConfigManager.h"
-#include "DolphinWX/ISOProperties.h"
-#include "DolphinWX/WxUtils.h"
+#include "DolphinWX/Cheats/CheatsWindow.h"
 #include "DolphinWX/Cheats/CreateCodeDialog.h"
+#include "DolphinWX/WxUtils.h"
 
-// Fired when an ActionReplay code is created.
-wxDEFINE_EVENT(UPDATE_CHEAT_LIST_EVENT, wxCommandEvent);
-
-CreateCodeDialog::CreateCodeDialog(wxWindow* const parent, const u32 address, std::vector<ActionReplay::ARCode>* _arCodes)
-	: wxDialog(parent, wxID_ANY, _("Create AR Code"))
-	, m_code_address(address)
-	, arCodes(_arCodes)
+CreateCodeDialog::CreateCodeDialog(wxWindow* const parent, const u32 address)
+    : wxDialog(parent, wxID_ANY, _("Create AR Code")), m_code_address(address)
 {
-	wxStaticText* const label_name = new wxStaticText(this, wxID_ANY, _("Name: "));
-	m_textctrl_name = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(256, -1));
+  wxStaticText* const label_name = new wxStaticText(this, wxID_ANY, _("Name: "));
+  m_textctrl_name = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition,
+                                   wxDLG_UNIT(this, wxSize(180, -1)));
 
-	wxStaticText* const label_code = new wxStaticText(this, wxID_ANY, _("Code: "));
-	m_textctrl_code = new wxTextCtrl(this, wxID_ANY, wxString::Format("0x%08x", address));
-	m_textctrl_code->Disable();
+  wxStaticText* const label_code = new wxStaticText(this, wxID_ANY, _("Code: "));
+  m_textctrl_code = new wxTextCtrl(this, wxID_ANY, wxString::Format("0x%08x", address));
+  m_textctrl_code->Disable();
 
-	wxStaticText* const label_value = new wxStaticText(this, wxID_ANY, _("Value: "));
-	m_textctrl_value = new wxTextCtrl(this, wxID_ANY, "0");
+  wxStaticText* const label_value = new wxStaticText(this, wxID_ANY, _("Value: "));
+  m_textctrl_value = new wxTextCtrl(this, wxID_ANY, "0");
 
-	m_checkbox_use_hex = new wxCheckBox(this, wxID_ANY, _("Use Hex"));
-	m_checkbox_use_hex->SetValue(true);
+  m_checkbox_use_hex = new wxCheckBox(this, wxID_ANY, _("Use Hex"));
+  m_checkbox_use_hex->SetValue(true);
 
-	wxBoxSizer* const sizer_value_label = new wxBoxSizer(wxHORIZONTAL);
-	sizer_value_label->Add(label_value, 0, wxRIGHT, 5);
-	sizer_value_label->Add(m_checkbox_use_hex);
+  wxBoxSizer* const sizer_value_label = new wxBoxSizer(wxHORIZONTAL);
+  const int space5 = FromDIP(5);
+  sizer_value_label->Add(label_value);
+  sizer_value_label->Add(m_checkbox_use_hex, 0, wxLEFT, space5);
 
-	// main sizer
-	wxBoxSizer* const sizer_main = new wxBoxSizer(wxVERTICAL);
-	sizer_main->Add(label_name, 0, wxALL, 5);
-	sizer_main->Add(m_textctrl_name, 0, wxALL, 5);
-	sizer_main->Add(label_code, 0, wxALL, 5);
-	sizer_main->Add(m_textctrl_code, 0, wxALL, 5);
-	sizer_main->Add(sizer_value_label, 0, wxALL, 5);
-	sizer_main->Add(m_textctrl_value, 0, wxALL, 5);
-	sizer_main->Add(CreateButtonSizer(wxOK | wxCANCEL | wxNO_DEFAULT), 0, wxALL, 5);
+  // main sizer
+  wxBoxSizer* const sizer_main = new wxBoxSizer(wxVERTICAL);
+  sizer_main->AddSpacer(space5);
+  sizer_main->Add(label_name, 0, wxLEFT | wxRIGHT, space5);
+  sizer_main->AddSpacer(space5);
+  sizer_main->Add(m_textctrl_name, 0, wxLEFT | wxRIGHT, space5);
+  sizer_main->AddSpacer(space5);
+  sizer_main->Add(label_code, 0, wxLEFT | wxRIGHT, space5);
+  sizer_main->AddSpacer(space5);
+  sizer_main->Add(m_textctrl_code, 0, wxLEFT | wxRIGHT, space5);
+  sizer_main->AddSpacer(space5);
+  sizer_main->Add(sizer_value_label, 0, wxLEFT | wxRIGHT, space5);
+  sizer_main->AddSpacer(space5);
+  sizer_main->Add(m_textctrl_value, 0, wxLEFT | wxRIGHT, space5);
+  sizer_main->AddSpacer(space5);
+  sizer_main->Add(CreateButtonSizer(wxOK | wxCANCEL | wxNO_DEFAULT), 0, wxEXPAND | wxLEFT | wxRIGHT,
+                  space5);
+  sizer_main->AddSpacer(space5);
 
-	Bind(wxEVT_BUTTON, &CreateCodeDialog::PressOK, this, wxID_OK);
-	Bind(wxEVT_BUTTON, &CreateCodeDialog::PressCancel, this, wxID_CANCEL);
-	Bind(wxEVT_CLOSE_WINDOW, &CreateCodeDialog::OnEvent_Close, this);
+  // NOTE: Use default wxCANCEL handling.
+  Bind(wxEVT_BUTTON, &CreateCodeDialog::PressOK, this, wxID_OK);
 
-	SetSizerAndFit(sizer_main);
-	SetFocus();
+  SetSizerAndFit(sizer_main);
+  SetFocus();
 }
 
 void CreateCodeDialog::PressOK(wxCommandEvent& ev)
 {
-	const wxString code_name = m_textctrl_name->GetValue();
-	if (code_name.empty())
-	{
-		WxUtils::ShowErrorDialog(_("You must enter a name."));
-		return;
-	}
+  const wxString code_name = m_textctrl_name->GetValue();
+  if (code_name.empty())
+  {
+    WxUtils::ShowErrorDialog(_("You must enter a name."));
+    return;
+  }
 
-	long code_value;
-	int base = m_checkbox_use_hex->IsChecked() ? 16 : 10;
-	if (!m_textctrl_value->GetValue().ToLong(&code_value, base))
-	{
-		WxUtils::ShowErrorDialog(_("Invalid value."));
-		return;
-	}
+  long code_value;
+  int base = m_checkbox_use_hex->IsChecked() ? 16 : 10;
+  if (!m_textctrl_value->GetValue().ToLong(&code_value, base))
+  {
+    WxUtils::ShowErrorDialog(_("Invalid value."));
+    return;
+  }
 
-	//wxString full_code = textctrl_code->GetValue();
-	//full_code += ' ';
-	//full_code += wxString::Format("0x%08x", code_value);
+  // create the new code
+  ActionReplay::ARCode new_cheat;
+  new_cheat.active = false;
+  new_cheat.user_defined = true;
+  new_cheat.name = WxStrToStr(code_name);
+  new_cheat.ops.emplace_back(ActionReplay::AREntry(m_code_address, code_value));
 
-	// create the new code
-	ActionReplay::ARCode new_cheat;
-	new_cheat.active = false;
-	new_cheat.name = WxStrToStr(code_name);
-	const ActionReplay::AREntry new_entry(m_code_address, code_value);
-	new_cheat.ops.push_back(new_entry);
+  wxCommandEvent add_event(DOLPHIN_EVT_ADD_NEW_ACTION_REPLAY_CODE, GetId());
+  add_event.SetClientData(&new_cheat);
+  GetParent()->GetEventHandler()->ProcessEvent(add_event);
 
-	// pretty hacky - add the code to the gameini
-	{
-	CISOProperties isoprops(SConfig::GetInstance().m_LastFilename, this);
-	// add the code to the isoproperties arcode list
-	arCodes->push_back(new_cheat);
-	// save the gameini
-	isoprops.SaveGameConfig();
-	isoprops.ActionReplayList_Load(); // loads the new arcodes
-	//ActionReplay::UpdateActiveList();
-	}
-
-	// Propagate back to the parent frame to update the cheat list.
-	GetEventHandler()->AddPendingEvent(wxCommandEvent(UPDATE_CHEAT_LIST_EVENT));
-
-	Close();
-}
-
-void CreateCodeDialog::PressCancel(wxCommandEvent& ev)
-{
-	Close();
-}
-
-void CreateCodeDialog::OnEvent_Close(wxCloseEvent& ev)
-{
-	Destroy();
+  // Allow base class to process. wxDialog will set the return code and hide the window.
+  ev.Skip();
 }

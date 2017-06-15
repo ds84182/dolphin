@@ -15,76 +15,84 @@
 #include "VideoCommon/OnScreenDisplay.h"
 #include "VideoCommon/RenderBase.h"
 
-
 namespace OSD
 {
-
-struct Message
-{
-	Message() {}
-	Message(const std::string& s, u32 ts, u32 rgba) : m_str(s), m_timestamp(ts), m_rgba(rgba)
-	{
-	}
-
-	std::string m_str;
-	u32 m_timestamp;
-	u32 m_rgba;
-};
-
 static std::multimap<CallbackType, Callback> s_callbacks;
-static std::list<Message> s_msgList;
+static std::multimap<MessageType, Message> s_messages;
+static std::mutex s_messages_mutex;
 
-void AddMessage(const std::string& str, u32 ms, u32 rgba)
+void AddTypedMessage(MessageType type, const std::string& message, u32 ms, u32 rgba)
 {
-	s_msgList.emplace_back(str, Common::Timer::GetTimeMs() + ms, rgba);
+  std::lock_guard<std::mutex> lock(s_messages_mutex);
+  s_messages.erase(type);
+  s_messages.emplace(type, Message(message, Common::Timer::GetTimeMs() + ms, rgba));
+}
+
+void AddMessage(const std::string& message, u32 ms, u32 rgba)
+{
+  std::lock_guard<std::mutex> lock(s_messages_mutex);
+  s_messages.emplace(MessageType::Typeless,
+                     Message(message, Common::Timer::GetTimeMs() + ms, rgba));
+}
+
+void DrawMessage(const Message& msg, int top, int left, int time_left)
+{
+  float alpha = std::min(1.0f, std::max(0.0f, time_left / 1024.0f));
+  u32 color = (msg.m_rgba & 0xFFFFFF) | ((u32)((msg.m_rgba >> 24) * alpha) << 24);
+
+  g_renderer->RenderText(msg.m_str, left, top, color);
 }
 
 void DrawMessages()
 {
-	if (!SConfig::GetInstance().m_LocalCoreStartupParameter.bOnScreenDisplayMessages)
-		return;
+  if (!SConfig::GetInstance().bOnScreenDisplayMessages)
+    return;
 
-	int left = 25, top = 15;
-	auto it = s_msgList.begin();
-	while (it != s_msgList.end())
-	{
-		int time_left = (int)(it->m_timestamp - Common::Timer::GetTimeMs());
-		float alpha = std::max(1.0f, std::min(0.0f, time_left / 1024.0f));
-		u32 color = (it->m_rgba & 0xFFFFFF) | ((u32)((it->m_rgba >> 24) * alpha) << 24);
+  {
+    std::lock_guard<std::mutex> lock(s_messages_mutex);
 
-		g_renderer->RenderText(it->m_str, left, top, color);
+    u32 now = Common::Timer::GetTimeMs();
+    int left = 20, top = 35;
 
-		top += 15;
+    auto it = s_messages.begin();
+    while (it != s_messages.end())
+    {
+      const Message& msg = it->second;
+      int time_left = (int)(msg.m_timestamp - now);
+      DrawMessage(msg, top, left, time_left);
 
-		if (time_left <= 0)
-			it = s_msgList.erase(it);
-		else
-			++it;
-	}
+      if (time_left <= 0)
+        it = s_messages.erase(it);
+      else
+        ++it;
+      top += 15;
+    }
+  }
 }
 
 void ClearMessages()
 {
-	s_msgList.clear();
+  std::lock_guard<std::mutex> lock(s_messages_mutex);
+  s_messages.clear();
 }
 
 // On-Screen Display Callbacks
 void AddCallback(CallbackType type, Callback cb)
 {
-	s_callbacks.insert(std::pair<CallbackType, Callback>(type, cb));
+  s_callbacks.emplace(type, cb);
 }
 
 void DoCallbacks(CallbackType type)
 {
-	auto it_bounds = s_callbacks.equal_range(type);
-	for (auto it = it_bounds.first; it != it_bounds.second; ++it)
-	{
-		it->second();
-	}
+  auto it_bounds = s_callbacks.equal_range(type);
+  for (auto it = it_bounds.first; it != it_bounds.second; ++it)
+  {
+    it->second();
+  }
 
-	// Wipe all callbacks on shutdown
-	if (type == OSD_SHUTDOWN)
-		s_callbacks.clear();
+  // Wipe all callbacks on shutdown
+  if (type == CallbackType::Shutdown)
+    s_callbacks.clear();
 }
 
 }  // namespace

@@ -5,39 +5,35 @@
 #pragma once
 
 #include <queue>
+#include <utility>
+
 #include "Common/CommonTypes.h"
 
 class PointerWrap;
 
+namespace DSP
+{
+namespace HLE
+{
 class CMailHandler
 {
 public:
-	CMailHandler();
-	~CMailHandler();
+  CMailHandler();
+  ~CMailHandler();
 
-	void PushMail(u32 _Mail);
-	void Clear();
-	void Halt(bool _Halt);
-	void DoState(PointerWrap &p);
-	bool IsEmpty() const;
+  // TODO: figure out correct timing for interrupts rather than defaulting to "immediately."
+  void PushMail(u32 mail, bool interrupt = false, int cycles_into_future = 0);
+  void Clear();
+  void Halt(bool _Halt);
+  void DoState(PointerWrap& p);
+  bool IsEmpty() const;
 
-	u16 ReadDSPMailboxHigh();
-	u16 ReadDSPMailboxLow();
-
-	u32 GetNextMail() const
-	{
-		if (!m_Mails.empty())
-		{
-			return m_Mails.front();
-		}
-		else
-		{
-			// WARN_LOG(DSPHLE, "GetNextMail: No mails");
-			return 0;
-		}
-	}
+  u16 ReadDSPMailboxHigh();
+  u16 ReadDSPMailboxLow();
 
 private:
-	// mail handler
-	std::queue<u32> m_Mails;
+  // mail handler
+  std::queue<std::pair<u32, bool>> m_Mails;
 };
+}  // namespace HLE
+}  // namespace DSP

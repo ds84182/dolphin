@@ -4,9 +4,11 @@
 
 #pragma once
 
+#include <vector>
 #include <wx/arrstr.h>
 #include <wx/panel.h>
 
+class wxButton;
 class wxCheckBox;
 class wxChoice;
 class wxRadioBox;
@@ -14,29 +16,32 @@ class wxRadioBox;
 class GeneralConfigPane final : public wxPanel
 {
 public:
-	GeneralConfigPane(wxWindow* parent, wxWindowID id);
+  GeneralConfigPane(wxWindow* parent, wxWindowID id);
 
 private:
-	void InitializeGUI();
-	void LoadGUIValues();
-	void RefreshGUI();
+  void InitializeGUI();
+  void LoadGUIValues();
+  void BindEvents();
 
-	void OnDualCoreCheckBoxChanged(wxCommandEvent&);
-	void OnIdleSkipCheckBoxChanged(wxCommandEvent&);
-	void OnCheatCheckBoxChanged(wxCommandEvent&);
-	void OnForceNTSCJCheckBoxChanged(wxCommandEvent&);
-	void OnFrameLimitChoiceChanged(wxCommandEvent&);
-	void OnCPUEngineRadioBoxChanged(wxCommandEvent&);
+  void OnDualCoreCheckBoxChanged(wxCommandEvent&);
+  void OnCheatCheckBoxChanged(wxCommandEvent&);
+  void OnForceNTSCJCheckBoxChanged(wxCommandEvent&);
+  void OnThrottlerChoiceChanged(wxCommandEvent&);
+  void OnCPUEngineRadioBoxChanged(wxCommandEvent&);
+  void OnAnalyticsCheckBoxChanged(wxCommandEvent&);
+  void OnAnalyticsNewIdButtonClick(wxCommandEvent&);
 
-	wxArrayString m_frame_limit_array_string;
-	wxArrayString m_cpu_engine_array_string;
+  wxArrayString m_throttler_array_string;
+  wxArrayString m_cpu_engine_array_string;
 
-	wxCheckBox* m_dual_core_checkbox;
-	wxCheckBox* m_idle_skip_checkbox;
-	wxCheckBox* m_cheats_checkbox;
-	wxCheckBox* m_force_ntscj_checkbox;
+  wxCheckBox* m_dual_core_checkbox;
+  wxCheckBox* m_cheats_checkbox;
+  wxCheckBox* m_force_ntscj_checkbox;
 
-	wxChoice* m_frame_limit_choice;
+  wxCheckBox* m_analytics_checkbox;
+  wxButton* m_analytics_new_id;
 
-	wxRadioBox* m_cpu_engine_radiobox;
+  wxChoice* m_throttler_choice;
+
+  wxRadioBox* m_cpu_engine_radiobox;
 };
