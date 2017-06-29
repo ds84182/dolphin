@@ -5,6 +5,7 @@
 #include "Common/CommonTypes.h"
 #include "Common/FileUtil.h"
 #include "Common/MsgHandler.h"
+#include "Common/Thread.h"
 
 #include "Core/LuaInterface.h"
 
@@ -74,6 +75,8 @@ void Shutdown()
 static void LuaThread()
 {
   std::unique_lock<std::mutex> lock(s_event_done_mutex);
+
+  Common::SetCurrentThreadName("Lua thread");
 
   int result;
   lua_State *L;
