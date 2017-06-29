@@ -508,8 +508,6 @@ static void EmuThread(std::unique_ptr<BootParameters> boot)
   // Load GCM/DOL/ELF whatever ... we boot with the interpreter core
   PowerPC::SetMode(PowerPC::CoreMode::Interpreter);
 
-  Lua::Init();
-
   // Determine the CPU thread function
   void (*cpuThreadFunc)(const std::optional<std::string>& savestate_path, bool delete_savestate);
   if (std::holds_alternative<BootParameters::DFF>(boot->parameters))
@@ -519,6 +517,9 @@ static void EmuThread(std::unique_ptr<BootParameters> boot)
 
   if (!CBoot::BootUp(std::move(boot)))
     return;
+
+  Lua::Init();
+  Common::ScopeGuard lua_guard{ Lua::Shutdown };
 
   // This adds the SyncGPU handler to CoreTiming, so now CoreTiming::Advance might block.
   Fifo::Prepare();

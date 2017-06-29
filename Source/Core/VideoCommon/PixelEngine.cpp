@@ -16,6 +16,7 @@
 #include "Core/CoreTiming.h"
 #include "Core/HW/MMIO.h"
 #include "Core/HW/ProcessorInterface.h"
+#include "Core/LuaInterface.h"
 #include "VideoCommon/BoundingBox.h"
 #include "VideoCommon/Fifo.h"
 #include "VideoCommon/PerfQueryBase.h"
@@ -311,6 +312,8 @@ void SetToken(const u16 token, const bool interrupt)
 void SetFinish()
 {
   DEBUG_LOG(PIXELENGINE, "VIDEO Set Finish");
+
+  Lua::Signal(Lua::Event::FRAME);
 
   std::lock_guard<std::mutex> lk(s_token_finish_mutex);
 
