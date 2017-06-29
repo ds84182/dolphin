@@ -2,8 +2,9 @@
 // Licensed under GPLv2+
 // Refer to the license.txt file included.
 
-#include "Common/MsgHandler.h"
 #include "Common/CommonTypes.h"
+#include "Common/FileUtil.h"
+#include "Common/MsgHandler.h"
 
 #include "Core/LuaInterface.h"
 
@@ -83,49 +84,30 @@ static void LuaThread()
   if (!L)
     return;
 
-  luaL_openlibs(L); // Load Lua libraries
+  // Load Lua base libraries
+  luaL_openlibs(L);
 
   // Require the Dolphin library
-  // This code is functionally equivalent to:
-  // require("dolphin").main()
-  // Except with more checks.
+  constexpr const char *boot_script =
+    "local sysdir = ...;"
+    "package.path = package.path..';'..sysdir..'Lua/?.lua'..';'..sysdir..'Lua/?/init.lua';"
+    "require('dolphin').main();";
 
-  // The Dolphin library will load the script later.
+  result = luaL_loadstring(L, boot_script); // [ bootfunc: function ] || [ error: string ]
 
-  // []
-  lua_getglobal(L, "require"); // [ require: function ]
-  lua_pushstring(L, "dolphin"); // [ "dolphin": string, require: function ]
-  result = lua_pcall(L, 1, 1, 0); // [ dolphin: table ] || [ error: string ]
+  if (result == 0) {
+    // [ bootfunc: function ]
+    lua_pushstring(L, File::GetSysDirectory().c_str()); // [ sysdir: string, bootfunc: function ]
+    result = lua_pcall(L, 1, 0, 0); // [] || [ error: string ]
+  }
 
   if (result != 0) {
     // [ error: string ]
 
     // An error occurred while trying to require the Dolphin library
-    PanicAlert("Failed to initialize Dolphin Lua library: %s\n", lua_tostring(L, -1));
+    PanicAlert("Failed to run Dolphin Lua library: %s\n", lua_tostring(L, -1));
 
     lua_pop(L, -1); // []
-  }
-  else
-  {
-    // [ dolphin: table ]
-
-    if (lua_istable(L, -1)) {
-      // Call main
-      lua_getfield(L, -1, "main"); // [ dolphin.main: function, dolphin: table ]
-      result = lua_pcall(L, 0, 0, 0); // [ dolphin: table ] || [ error: string, dolphin: table ]
-      if (result)
-      {
-        // [ error: string, dolphin: table ]
-        PanicAlert("Failed to run Dolphin Lua main function: %s\n", lua_tostring(L, -1));
-        lua_pop(L, -1); // [ dolphin: table ]
-      }
-      // [ dolphin: table ]
-      lua_pop(L, -1); // []
-    }
-    else
-    {
-      PanicAlert("Failed to initialize Dolphin Lua library: Require result is not a table\n");
-    }
   }
   // []
 
