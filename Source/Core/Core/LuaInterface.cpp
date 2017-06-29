@@ -4,6 +4,7 @@
 
 #include "Common/CommonTypes.h"
 #include "Common/FileUtil.h"
+#include "Common/Logging/Log.h"
 #include "Common/MsgHandler.h"
 #include "Common/Thread.h"
 
@@ -216,6 +217,10 @@ API_EXPORT uint16_t Dolphin_Wait(uint16_t timeout_ms) {
 // Dolphin API Exports
 
 API_EXPORT bool(*Dolphin_MsgAlert)(bool yes_no, int Style, const char *format, ...) = MsgAlert;
+
+API_EXPORT void Dolphin_Log(int level, const char *text) {
+  GENERIC_LOG(LogTypes::SCRIPT, static_cast<LogTypes::LOG_LEVELS>(level), text);
+}
 
 API_EXPORT bool(*Dolphin_Mem_IsRamAddress)(u32 address) = PowerPC::HostIsRAMAddress;
 

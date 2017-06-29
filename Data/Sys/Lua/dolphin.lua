@@ -26,6 +26,16 @@ enum Message_Type {
 
 bool (*Dolphin_MsgAlert)(bool yes_no, int Style, const char *format, ...);
 
+struct Log_Level {
+	static const unsigned NOTICE = 1;   // VERY important information that is NOT errors. Like startup and OSReports.
+	static const unsigned ERROR = 2;    // Critical errors
+	static const unsigned WARNING = 3;  // Something is suspicious.
+	static const unsigned INFO = 4;     // General information.
+	static const unsigned DEBUG = 5;    // Detailed debugging - might make things slow.
+};
+
+void Dolphin_Log(int level, const char *text);
+
 bool (*Dolphin_Mem_IsRamAddress)(uint32_t address);
 
 uint8_t (*Dolphin_Mem_Read8)(uint32_t address);
@@ -172,6 +182,38 @@ local Dolphin_MsgAlert = ffi.C.Dolphin_MsgAlert
 function dolphin.alert(...)
 	-- Essentially PanicAlert
 	Dolphin_MsgAlert(false, ffi.C.Warning, ...)
+-- Dolphin Logging API
+do
+	dolphin.logLevel = ffi.new("struct Dolphin_Log")
+
+	local logLevel = dolphin.logLevel
+
+	dolphin.rawlog = ffi.C.Dolphin_Log
+
+	function dolphin.log(format, ...)
+		ffi.C.Dolphin_Log(logLevel.NOTICE, format:format(...))
+	end
+
+	function dolphin.logi(format, ...)
+		ffi.C.Dolphin_Log(logLevel.INFO, format:format(...))
+	end
+
+	function dolphin.logw(format, ...)
+		ffi.C.Dolphin_Log(logLevel.WARNING, format:format(...))
+	end
+
+	function dolphin.loge(format, ...)
+		ffi.C.Dolphin_Log(logLevel.ERROR, format:format(...))
+	end
+end
+
+-- Print wrapper
+function print(...)
+	local args = {...}
+	for i=1, #args do
+		args[i] = tostring(args[i])
+	end
+	dolphin.log("%s", table.concat(args, "\t"))
 end
 
 -- Dolphin Memory API
