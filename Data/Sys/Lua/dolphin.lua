@@ -137,11 +137,11 @@ function dolphin.main()
 				end
 				local func, err = loadstring(ffi.string(evalCStr))
 				if not func then
-					dolphin.alert("%s", err)
+					dolphin.loge("%s", err)
 				else
 					local s, err = pcall(func)
 					if not s then
-						dolphin.alert("%s", err)
+						dolphin.loge("%s", err)
 					end
 				end
 			else
@@ -186,7 +186,7 @@ end
 
 -- Dolphin Logging API
 do
-	dolphin.logLevel = ffi.new("struct Dolphin_Log")
+	dolphin.logLevel = ffi.new("struct Log_Level")
 
 	local logLevel = dolphin.logLevel
 
