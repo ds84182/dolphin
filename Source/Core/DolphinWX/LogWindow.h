@@ -8,6 +8,7 @@
 #include <queue>
 #include <utility>
 #include <vector>
+#include <list>
 #include <wx/font.h>
 #include <wx/panel.h>
 #include <wx/timer.h>
@@ -45,6 +46,9 @@ private:
   wxTimer m_LogTimer;
   LogManager* m_LogManager;
   std::queue<std::pair<u8, wxString>> msgQueue;
+  std::list<wxString> m_cmdline_history;
+  std::list<wxString>::const_iterator m_cmdline_history_iter;
+  wxString m_cmdline_old_value;
   bool m_LogAccess;
 
   // Controls
@@ -64,6 +68,8 @@ private:
   void OnFontChange(wxCommandEvent& event);
   void OnWrapLineCheck(wxCommandEvent& event);
   void OnClear(wxCommandEvent& event);
+  void OnCommandSubmitted(wxCommandEvent& event);
+  void OnCommandKeyPress(wxKeyEvent& event);
   void OnLogTimer(wxTimerEvent& WXUNUSED(event));
   void UpdateLog();
 };

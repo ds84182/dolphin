@@ -24,6 +24,7 @@
 #include "Common/IniFile.h"
 #include "Common/Logging/ConsoleListener.h"
 #include "Common/Logging/LogManager.h"
+#include "Core/LuaInterface.h"
 #include "DolphinWX/Debugger/DebuggerUIUtil.h"
 #include "DolphinWX/Frame.h"
 #include "DolphinWX/LogWindow.h"
@@ -98,6 +99,8 @@ void CLogWindow::CreateGUIControls()
   // submit row
   m_cmdline = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
                              wxTE_PROCESS_ENTER | wxTE_PROCESS_TAB);
+  m_cmdline->Bind(wxEVT_TEXT_ENTER, &CLogWindow::OnCommandSubmitted, this);
+  m_cmdline->Bind(wxEVT_KEY_DOWN, &CLogWindow::OnCommandKeyPress, this);
 
   // Clear log button
   m_clear_log_btn =
@@ -175,6 +178,50 @@ void CLogWindow::PopulateBottom()
   sBottom->Add(m_Log, 1, wxEXPAND | wxSHRINK);
   sBottom->Add(m_cmdline, 0, wxEXPAND);
   Layout();
+}
+
+void CLogWindow::OnCommandSubmitted(wxCommandEvent& WXUNUSED(event))
+{
+  auto line = m_cmdline->GetValue();
+  Lua::Evaluate(line.ToStdString());
+  m_cmdline_history.push_back(line);
+  m_cmdline_history_iter = m_cmdline_history.cend();
+
+  m_cmdline->Clear();
+}
+
+void CLogWindow::OnCommandKeyPress(wxKeyEvent& event)
+{
+  switch (event.GetKeyCode()) {
+  case wxKeyCode::WXK_UP:
+    if (m_cmdline_history_iter != m_cmdline_history.cbegin())
+    {
+      if (m_cmdline_history_iter == m_cmdline_history.cend())
+      {
+        m_cmdline_old_value = m_cmdline->GetValue();
+      }
+      m_cmdline_history_iter--;
+      m_cmdline->SetValue(*m_cmdline_history_iter);
+      m_cmdline->SetInsertionPointEnd();
+    }
+    break;
+  case wxKeyCode::WXK_DOWN:
+    if (m_cmdline_history_iter != m_cmdline_history.cend()) {
+      m_cmdline_history_iter++;
+      if (m_cmdline_history_iter == m_cmdline_history.cend())
+      {
+        m_cmdline->SetValue(m_cmdline_old_value);
+      }
+      else
+      {
+        m_cmdline->SetValue(*m_cmdline_history_iter);
+      }
+      m_cmdline->SetInsertionPointEnd();
+    }
+    break;
+  default:
+    event.Skip();
+  }
 }
 
 wxTextCtrl* CLogWindow::CreateTextCtrl(wxPanel* parent, wxWindowID id, long Style)
