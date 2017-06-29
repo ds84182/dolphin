@@ -176,12 +176,17 @@ end
 
 dolphin.onFrame = makeEventListenFunc(events.FRAME)
 
--- Cache the function pointer
-local Dolphin_MsgAlert = ffi.C.Dolphin_MsgAlert
+-- Dolphin Message Alert API
+do
+	-- Cache the function pointer
+	local Dolphin_MsgAlert = ffi.C.Dolphin_MsgAlert
 
-function dolphin.alert(...)
-	-- Essentially PanicAlert
-	Dolphin_MsgAlert(false, ffi.C.Warning, ...)
+	function dolphin.alert(...)
+		-- Essentially PanicAlert
+		Dolphin_MsgAlert(false, ffi.C.Warning, ...)
+	end
+end
+
 -- Dolphin Logging API
 do
 	dolphin.logLevel = ffi.new("struct Dolphin_Log")
