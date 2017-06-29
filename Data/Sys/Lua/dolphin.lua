@@ -115,9 +115,6 @@ function dolphin.post(func)
 end
 
 function dolphin.main()
-	-- Load user scripts and init things
-	dofile("script.lua")
-	
 	-- Run the main loop
 	while true do
 		local wait = -1 -- Normally, we want to block in Dolphin_Wait
