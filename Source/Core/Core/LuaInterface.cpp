@@ -30,9 +30,6 @@
 // Lua code runs in its own thread.
 // Other Dolphin threads push events through the Lua interface.
 
-API_EXPORT volatile uint64_t Dolphin_Event_Mask[4] = { 0 };
-API_EXPORT volatile const char *Dolphin_Evaluate_Script = nullptr;
-
 namespace Lua
 {
 
@@ -45,9 +42,12 @@ static uint16_t s_event;
 static std::atomic<uint32_t> s_event_mask[8];
 
 static void LuaThread();
+static void PushSymbols(lua_State *L);
 
-API_EXPORT void Dolphin_AddEventMask(uint16_t event);
-API_EXPORT void Dolphin_RemoveEventMask(uint16_t event);
+static const char *Dolphin_Evaluate_Script = nullptr;
+
+static void Dolphin_AddEventMask(uint16_t event);
+static void Dolphin_RemoveEventMask(uint16_t event);
 
 void Init()
 {
@@ -93,8 +93,9 @@ static void LuaThread()
 
   // Require the Dolphin library
   constexpr const char *boot_script =
-    "local sysdir = ...;"
+    "local sysdir, symbols = ...;"
     "package.path = package.path..';'..sysdir..'Lua/?.lua'..';'..sysdir..'Lua/?/init.lua';"
+    "_DOLPHIN_SYMS = symbols;"
     "require('dolphin').main();";
 
   result = luaL_loadstring(L, boot_script); // [ bootfunc: function ] || [ error: string ]
@@ -102,7 +103,10 @@ static void LuaThread()
   if (result == 0) {
     // [ bootfunc: function ]
     lua_pushstring(L, File::GetSysDirectory().c_str()); // [ sysdir: string, bootfunc: function ]
-    result = lua_pcall(L, 1, 0, 0); // [] || [ error: string ]
+
+    PushSymbols(L); // [ symbols: table, sysdir: string, bootfunc: function ]
+
+    result = lua_pcall(L, 2, 0, 0); // [] || [ error: string ]
   }
 
   if (result != 0) {
@@ -118,7 +122,7 @@ static void LuaThread()
   lua_close(L);
 }
 
-API_EXPORT void Dolphin_AddEventMask(uint16_t event)
+static void Dolphin_AddEventMask(uint16_t event)
 {
   if (event < Event::INVALID) {
     unsigned i = 0;
@@ -130,7 +134,7 @@ API_EXPORT void Dolphin_AddEventMask(uint16_t event)
   }
 }
 
-API_EXPORT void Dolphin_RemoveEventMask(uint16_t event) 
+static void Dolphin_RemoveEventMask(uint16_t event) 
 {
   if (event < Event::INVALID) {
     unsigned i = 0;
@@ -158,7 +162,7 @@ static bool HasEvent() {
   return s_event < Event::INVALID;
 }
 
-static uint16_t Wait(uint16_t timeout_ms) {
+static uint16_t Wait(uint64_t timeout_ms) {
   // The Lua thread already has the mutex locked, so adopt
   std::unique_lock<std::mutex> lock(s_event_done_mutex, std::adopt_lock);
 
@@ -208,30 +212,49 @@ void Evaluate(const std::string &script) {
   Signal(Event::EVALUATE);
 }
 
+static void Dolphin_Log(int level, const char *text) {
+  GENERIC_LOG(LogTypes::SCRIPT, static_cast<LogTypes::LOG_LEVELS>(level), "%s", text);
+}
+
+// Push the symbols as light userdata to the Lua context
+// This mitigates issues that would be hit on various platforms from regular symbol lookup
+static void PushSymbols(lua_State *L) {
+  lua_createtable(L, 0, 50); // [ symbols: table ]
+                             // [ address: light-userdata, symbols: table ]
+#define TYPE(...) __VA_ARGS__
+#define BINDN(func, name, type) \
+  static_assert(std::is_same_v<decltype(&func), type>, "typeof " #func " is not " #type); \
+  lua_pushlightuserdata(L, &func); \
+  lua_setfield(L, -2, #name); \
+  lua_pushstring(L, #type); \
+  lua_setfield(L, -2, "typeof_" #name)
+#define BIND(x, type) BINDN(x, x, type)
+  BIND(Dolphin_AddEventMask, void(*)(uint16_t event));
+  BIND(Dolphin_RemoveEventMask, void(*)(uint16_t event));
+  BINDN(Wait, Dolphin_Wait, uint16_t(*)(uint64_t timeout_ms));
+  BIND(Dolphin_Evaluate_Script, const char **);
+  BINDN(MsgAlert, Dolphin_MsgAlert, TYPE(bool(*)(bool yes_no, int Style, const char *format, ...)));
+  BIND(Dolphin_Log, TYPE(void(*)(int level, const char *text)));
+
+  BINDN(PowerPC::HostIsRAMAddress, Dolphin_Mem_IsRamAddress, bool(*)(uint32_t address));
+
+  BINDN(PowerPC::HostRead_U8, Dolphin_Mem_Read8, uint8_t(*)(uint32_t address));
+  BINDN(PowerPC::HostRead_U16, Dolphin_Mem_Read16, uint16_t(*)(uint32_t address));
+  BINDN(PowerPC::HostRead_U32, Dolphin_Mem_Read32, uint32_t(*)(uint32_t address));
+  BINDN(PowerPC::HostRead_U64, Dolphin_Mem_Read64, uint64_t(*)(uint32_t address));
+
+  BINDN(PowerPC::HostWrite_U8, Dolphin_Mem_Write8, TYPE(void(*)(uint8_t value, uint32_t address)));
+  BINDN(PowerPC::HostWrite_U16, Dolphin_Mem_Write16, TYPE(void(*)(uint16_t value, uint32_t address)));
+  BINDN(PowerPC::HostWrite_U32, Dolphin_Mem_Write32, TYPE(void(*)(uint32_t value, uint32_t address)));
+  BINDN(PowerPC::HostWrite_U64, Dolphin_Mem_Write64, TYPE(void(*)(uint64_t value, uint32_t address)));
+
+  BINDN(
+    JitInterface::InvalidateICache, 
+    Dolphin_Mem_InvalidateICache, 
+    TYPE(void(*)(uint32_t address, uint32_t size, bool forced))
+  );
+#undef BIND
+#undef BINDN
+}
+
 } // Lua
-
-API_EXPORT uint16_t Dolphin_Wait(uint16_t timeout_ms) {
-  return Lua::Wait(timeout_ms);
-}
-
-// Dolphin API Exports
-
-API_EXPORT bool(*Dolphin_MsgAlert)(bool yes_no, int Style, const char *format, ...) = MsgAlert;
-
-API_EXPORT void Dolphin_Log(int level, const char *text) {
-  GENERIC_LOG(LogTypes::SCRIPT, static_cast<LogTypes::LOG_LEVELS>(level), text);
-}
-
-API_EXPORT bool(*Dolphin_Mem_IsRamAddress)(u32 address) = PowerPC::HostIsRAMAddress;
-
-API_EXPORT u8(*Dolphin_Mem_Read8)(u32 address) = PowerPC::HostRead_U8;
-API_EXPORT u16(*Dolphin_Mem_Read16)(u32 address) = PowerPC::HostRead_U16;
-API_EXPORT u32(*Dolphin_Mem_Read32)(u32 address) = PowerPC::HostRead_U32;
-API_EXPORT u64(*Dolphin_Mem_Read64)(u32 address) = PowerPC::HostRead_U64;
-
-API_EXPORT void(*Dolphin_Mem_Write8)(u8 value, u32 address) = PowerPC::HostWrite_U8;
-API_EXPORT void(*Dolphin_Mem_Write16)(u16 value, u32 address) = PowerPC::HostWrite_U16;
-API_EXPORT void(*Dolphin_Mem_Write32)(u32 value, u32 address) = PowerPC::HostWrite_U32;
-API_EXPORT void(*Dolphin_Mem_Write64)(u64 value, u32 address) = PowerPC::HostWrite_U64;
-
-API_EXPORT void (*Dolphin_Mem_InvalidateICache)(u32 address, u32 size, bool forced) = JitInterface::InvalidateICache;

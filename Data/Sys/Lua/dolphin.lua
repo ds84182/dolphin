@@ -1,9 +1,48 @@
-require "jit.dump".on()
+require "jit.dump".on("H", "optout.html")
 
 local dolphin = {}
 _G.dolphin = dolphin
 
 local ffi = require "ffi"
+
+-- Use FFI to optimally bind FFI functions
+local symbolHeader = {}
+local native = {}
+for symbol, value in pairs(_DOLPHIN_SYMS) do
+	if type(value) == "userdata" then
+		-- Userdata is in the format of "userdata: 0xpointer"
+		-- We take off "userdata: " and append "ULL" to turn the userdata into a unsigned long long constant
+		local valueULL = tostring(value):sub(#("userdata: ")).."ULL"
+		-- Extract the type name from the symbol map
+		-- Complex types stringify as "TYPE(x)", so we remove the TYPE() part to get x
+		local typeName = _DOLPHIN_SYMS["typeof_"..symbol]
+		if typeName:sub(1, 4) == "TYPE" then
+			typeName = typeName:sub(6, -2)
+		end
+		-- If we can find (*), its a function!
+		-- TODO: Use type traits on the C++ side
+		local isFunc = typeName:find("(*)", 1, true)
+		local body
+		if isFunc then
+			body = "return val(...)"
+		else
+			body = "return val;"
+		end
+		-- This inlines and compiles into a normal call (like if it was declared with ffi.cdef and called through ffi.C)
+		local func = assert(loadstring([=[
+local ffi, valType = ...
+return function(...)
+	local val = ffi.cast(valType, ]=]..valueULL..[=[)
+	]=]..body..[=[
+end]=]))
+		local nativeFunc = func(ffi, ffi.typeof(typeName))
+		if isFunc then
+			native[symbol] = nativeFunc
+		else
+			native[symbol] = nativeFunc()
+		end
+	end
+end
 
 ffi.cdef [=[
 // 1 << Event
@@ -14,17 +53,9 @@ struct Dolphin_Event {
 	static const uint16_t INVALID = 256;
 };
 
-void Dolphin_AddEventMask(uint16_t event);
-void Dolphin_RemoveEventMask(uint16_t event);
-uint16_t Dolphin_Wait(uint64_t timeout_ms);
-
-const char *Dolphin_Evaluate_Script;
-
 enum Message_Type {
   Information, Question, Warning, Critical
 };
-
-bool (*Dolphin_MsgAlert)(bool yes_no, int Style, const char *format, ...);
 
 struct Log_Level {
 	static const unsigned NOTICE = 1;   // VERY important information that is NOT errors. Like startup and OSReports.
@@ -33,22 +64,6 @@ struct Log_Level {
 	static const unsigned INFO = 4;     // General information.
 	static const unsigned DEBUG = 5;    // Detailed debugging - might make things slow.
 };
-
-void Dolphin_Log(int level, const char *text);
-
-bool (*Dolphin_Mem_IsRamAddress)(uint32_t address);
-
-uint8_t (*Dolphin_Mem_Read8)(uint32_t address);
-uint16_t (*Dolphin_Mem_Read16)(uint32_t address);
-uint32_t (*Dolphin_Mem_Read32)(uint32_t address);
-uint64_t (*Dolphin_Mem_Read64)(uint32_t address);
-
-void (*Dolphin_Mem_Write8)(uint8_t value, uint32_t address);
-void (*Dolphin_Mem_Write16)(uint16_t value, uint32_t address);
-void (*Dolphin_Mem_Write32)(uint32_t value, uint32_t address);
-void (*Dolphin_Mem_Write64)(uint64_t value, uint32_t address);
-
-void (*Dolphin_Mem_InvalidateICache)(uint32_t address, uint32_t size, bool forced);
 ]=]
 
 local events = ffi.new("struct Dolphin_Event")
@@ -65,11 +80,11 @@ local function makeEventHandler(name, eventId, eventArgsFunc)
 end
 
 local function addEventMask(event)
-	ffi.C.Dolphin_AddEventMask(event)
+	native.Dolphin_AddEventMask(event)
 end
 
 local function removeEventMask(event)
-	ffi.C.Dolphin_RemoveEventMask(event)
+	native.Dolphin_RemoveEventMask(event)
 end
 
 local function addListener(eventHandler, func)
@@ -121,7 +136,7 @@ function dolphin.main()
 		if queue[1] then -- If the post queue has items, run Dolphin_Wait in non-blocking(-ish) mode
 			wait = 0
 		end
-		local event = ffi.C.Dolphin_Wait(wait)
+		local event = native.Dolphin_Wait(wait)
 		
 		if event < events.INVALID then
 			-- Valid event
@@ -131,7 +146,7 @@ function dolphin.main()
 			
 			if event == events.EVALUATE then
 				-- Evaluate some code
-				local evalCStr = ffi.C.Dolphin_Evaluate_Script -- Will be freed by the event creator during next call to Dolphin_Wait
+				local evalCStr = native.Dolphin_Evaluate_Script[0] -- Will be freed by the event creator during next call to Dolphin_Wait
 				if evalCStr == nil then
 					print("Null string in evaluate, Dolphin will now crash.")
 				end
@@ -176,7 +191,7 @@ dolphin.onFrame = makeEventListenFunc(events.FRAME)
 -- Dolphin Message Alert API
 do
 	-- Cache the function pointer
-	local Dolphin_MsgAlert = ffi.C.Dolphin_MsgAlert
+	local Dolphin_MsgAlert = native.Dolphin_MsgAlert
 
 	function dolphin.alert(...)
 		-- Essentially PanicAlert
@@ -190,22 +205,22 @@ do
 
 	local logLevel = dolphin.logLevel
 
-	dolphin.rawlog = ffi.C.Dolphin_Log
+	dolphin.rawlog = native.Dolphin_Log
 
 	function dolphin.log(format, ...)
-		ffi.C.Dolphin_Log(logLevel.NOTICE, format:format(...))
+		native.Dolphin_Log(logLevel.NOTICE, format:format(...))
 	end
 
 	function dolphin.logi(format, ...)
-		ffi.C.Dolphin_Log(logLevel.INFO, format:format(...))
+		native.Dolphin_Log(logLevel.INFO, format:format(...))
 	end
 
 	function dolphin.logw(format, ...)
-		ffi.C.Dolphin_Log(logLevel.WARNING, format:format(...))
+		native.Dolphin_Log(logLevel.WARNING, format:format(...))
 	end
 
 	function dolphin.loge(format, ...)
-		ffi.C.Dolphin_Log(logLevel.ERROR, format:format(...))
+		native.Dolphin_Log(logLevel.ERROR, format:format(...))
 	end
 end
 
@@ -222,17 +237,17 @@ end
 do
 	dolphin.memory = {}
 	
-	dolphin.memory.validAddress = ffi.C.Dolphin_Mem_IsRamAddress
+	dolphin.memory.validAddress = native.Dolphin_Mem_IsRamAddress
 
-	dolphin.memory.readU8 = ffi.C.Dolphin_Mem_Read8
-	dolphin.memory.readU16 = ffi.C.Dolphin_Mem_Read16
-	dolphin.memory.readU32 = ffi.C.Dolphin_Mem_Read32
-	dolphin.memory.readU64 = ffi.C.Dolphin_Mem_Read64
+	dolphin.memory.readU8 = native.Dolphin_Mem_Read8
+	dolphin.memory.readU16 = native.Dolphin_Mem_Read16
+	dolphin.memory.readU32 = native.Dolphin_Mem_Read32
+	dolphin.memory.readU64 = native.Dolphin_Mem_Read64
 	
-	local writeU8 = ffi.C.Dolphin_Mem_Write8
-	local writeU16 = ffi.C.Dolphin_Mem_Write16
-	local writeU32 = ffi.C.Dolphin_Mem_Write32
-	local writeU64 = ffi.C.Dolphin_Mem_Write64
+	local writeU8 = native.Dolphin_Mem_Write8
+	local writeU16 = native.Dolphin_Mem_Write16
+	local writeU32 = native.Dolphin_Mem_Write32
+	local writeU64 = native.Dolphin_Mem_Write64
 	
 	-- Dolphin's value and address parameter placement is quite weird
 	
@@ -252,7 +267,7 @@ do
 		writeU64(value, address)
 	end
 	
-	local invalidateICache = ffi.C.Dolphin_Mem_InvalidateICache
+	local invalidateICache = native.Dolphin_Mem_InvalidateICache
 	
 	function dolphin.memory.invalidateICache(address, size, force)
 		if force == nil then force = false end
