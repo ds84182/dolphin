@@ -183,6 +183,7 @@ void CLogWindow::PopulateBottom()
 void CLogWindow::OnCommandSubmitted(wxCommandEvent& WXUNUSED(event))
 {
   auto line = m_cmdline->GetValue();
+  // TODO: This is no-op when emulation isn't running...
   Lua::Evaluate(line.ToStdString());
   m_cmdline_history.push_back(line);
   m_cmdline_history_iter = m_cmdline_history.cend();
