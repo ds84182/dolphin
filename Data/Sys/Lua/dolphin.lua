@@ -275,6 +275,15 @@ do
 	end
 end
 
+local realMain = dolphin.main
+function dolphin.main()
+	local s, e = xpcall(realMain, debug.traceback)
+	if not s then
+		-- TODO: This might need to be split into multiple lines
+		dolphin.loge("%s", e)
+	end
+end
+
 if false then
 	-- Game ID test code
 	local gameId = {}
