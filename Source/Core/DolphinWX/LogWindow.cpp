@@ -195,7 +195,7 @@ void CLogWindow::OnCommandKeyPress(wxKeyEvent& event)
 {
   switch (event.GetKeyCode()) {
   case wxKeyCode::WXK_UP:
-    if (m_cmdline_history_iter != m_cmdline_history.cbegin())
+    if (m_cmdline_history.size() > 0 && m_cmdline_history_iter != m_cmdline_history.cbegin())
     {
       if (m_cmdline_history_iter == m_cmdline_history.cend())
       {
@@ -207,7 +207,7 @@ void CLogWindow::OnCommandKeyPress(wxKeyEvent& event)
     }
     break;
   case wxKeyCode::WXK_DOWN:
-    if (m_cmdline_history_iter != m_cmdline_history.cend()) {
+    if (m_cmdline_history.size() > 0 && m_cmdline_history_iter != m_cmdline_history.cend()) {
       m_cmdline_history_iter++;
       if (m_cmdline_history_iter == m_cmdline_history.cend())
       {
