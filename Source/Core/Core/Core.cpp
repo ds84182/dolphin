@@ -519,7 +519,7 @@ static void EmuThread(std::unique_ptr<BootParameters> boot)
     return;
 
   Lua::Init();
-  Common::ScopeGuard lua_guard{ Lua::Shutdown };
+  Common::ScopeGuard lua_guard { Lua::Shutdown };
 
   // This adds the SyncGPU handler to CoreTiming, so now CoreTiming::Advance might block.
   Fifo::Prepare();
@@ -775,6 +775,7 @@ void Callback_VideoCopiedToXFB(bool video_update)
 
   Movie::FrameUpdate();
 
+  Lua::Signal(Lua::Event::FRAME);
   if (s_frame_step)
   {
     s_frame_step = false;
