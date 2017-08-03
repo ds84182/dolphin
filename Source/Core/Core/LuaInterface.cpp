@@ -60,8 +60,6 @@ void Init()
   Dolphin_AddEventMask(Event::EVALUATE);
 
   s_lua_thread = std::thread(LuaThread);
-
-  Evaluate("dolphin.alert('Hello from Eval!')");
 }
 
 void Shutdown()
@@ -113,7 +111,9 @@ static void LuaThread()
     // [ error: string ]
 
     // An error occurred while trying to require the Dolphin library
+    // TODO: Panic alerts should be redirected to log
     PanicAlert("Failed to run Dolphin Lua library: %s\n", lua_tostring(L, -1));
+    ERROR_LOG(SCRIPT, "Failed to run Dolphin Lua library: %s\n", lua_tostring(L, -1));
 
     lua_pop(L, -1); // []
   }
