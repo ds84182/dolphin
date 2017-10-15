@@ -1,5 +1,3 @@
-require "jit.dump".on("H", "optout.html")
-
 local dolphin = {}
 _G.dolphin = dolphin
 

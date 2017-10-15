@@ -775,7 +775,7 @@ void Callback_VideoCopiedToXFB(bool video_update)
 
   Movie::FrameUpdate();
 
-  Lua::Signal(Lua::Event::FRAME);
+  Lua::PostFrame();
   if (s_frame_step)
   {
     s_frame_step = false;

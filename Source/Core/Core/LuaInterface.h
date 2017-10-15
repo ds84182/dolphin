@@ -10,18 +10,75 @@
 #define API_EXPORT extern "C" __attribute__ ((visibility ("default")))
 #endif
 
+#include <variant>
+
 namespace Lua
 {
   void Init();
   void Shutdown();
-  void Signal(uint16_t event);
-  void Evaluate(const std::string &script);
 
   namespace Event
   {
-    constexpr uint16_t STOP = 0;
-    constexpr uint16_t EVALUATE = 1;
-    constexpr uint16_t FRAME = 2;
-    constexpr uint16_t INVALID = 256;
+    template <typename T>
+    struct ID_t;
+
+    template <typename T>
+    constexpr uint16_t ID = ID_t<T>::value;
+
+    struct Base {};
+    struct Stop : Base {};
+    struct Evaluate : Base {
+      std::string script;
+      Evaluate(const std::string &script) : script(script) {}
+    };
+    struct Frame : Base {};
+
+    using None = std::monostate;
+
+    template <>
+    struct ID_t<None> { static constexpr uint16_t value = 256; };
+
+    template <>
+    struct ID_t<Stop> { static constexpr uint16_t value = 0; };
+
+    template <>
+    struct ID_t<Evaluate> { static constexpr uint16_t value = 1; };
+
+    template <>
+    struct ID_t<Frame> { static constexpr uint16_t value = 2; };
+  }
+
+  using AnyEvent = std::variant<Event::None, Event::Stop, Event::Evaluate, Event::Frame>;
+
+  namespace Detail {
+    bool IsEventEnabledByID(uint16_t id);
+    void SignalEvent(AnyEvent &&event);
+  }
+
+  template <typename T>
+  bool IsEventEnabled() {
+    return Detail::IsEventEnabledByID(Event::ID<T>);
+  }
+
+  template <typename T, typename F>
+  void SignalEventLazy(const F &makeEvent) {
+    if (IsEventEnabled<T>()) {
+      AnyEvent event = makeEvent();
+      Detail::SignalEvent(std::move(event));
+    }
+  }
+
+  static inline void SignalEvent(AnyEvent &&event) {
+    Detail::SignalEvent(std::move(event));
+  }
+
+  static inline void Evaluate(const std::string &script) {
+    SignalEventLazy<Event::Evaluate>([&]() {
+      return Event::Evaluate(script);
+    });
+  }
+
+  static inline void PostFrame() {
+    SignalEventLazy<Event::Frame>([]() { return Event::Frame(); });
   }
 }

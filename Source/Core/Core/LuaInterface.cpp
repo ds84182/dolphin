@@ -4,8 +4,10 @@
 
 #include "Common/CommonTypes.h"
 #include "Common/FileUtil.h"
+#include "Common/FifoQueue.h"
 #include "Common/Logging/Log.h"
 #include "Common/MsgHandler.h"
+#include "Common/ScopeGuard.h"
 #include "Common/Thread.h"
 
 #include "Core/LuaInterface.h"
@@ -35,10 +37,11 @@ namespace Lua
 
 static std::thread s_lua_thread;
 static std::mutex s_event_done_mutex;
-static std::mutex s_event_signal_mutex;
 static std::condition_variable s_event_set_cond;
 
-static uint16_t s_event;
+static std::atomic<bool> s_thread_running;
+static Common::FifoQueue<AnyEvent, false> s_event_queue;
+static AnyEvent s_current_event;
 static std::atomic<uint32_t> s_event_mask[8];
 
 static void LuaThread();
@@ -51,14 +54,15 @@ static void Dolphin_RemoveEventMask(uint16_t event);
 
 void Init()
 {
-  s_event = Event::INVALID;
+  s_event_queue.Clear();
 
   for (unsigned i=0; i<8; i++)
     s_event_mask[i].store(0);
 
-  Dolphin_AddEventMask(Event::STOP);
-  Dolphin_AddEventMask(Event::EVALUATE);
+  Dolphin_AddEventMask(Event::ID<Event::Stop>);
+  Dolphin_AddEventMask(Event::ID<Event::Evaluate>);
 
+  s_thread_running.store(false);
   s_lua_thread = std::thread(LuaThread);
 }
 
@@ -66,30 +70,35 @@ void Shutdown()
 {
   if (s_lua_thread.joinable())
   {
-    Signal(Event::STOP);
+    Detail::SignalEvent(Event::Stop());
     s_lua_thread.join();
   }
 }
 
 static void LuaThread()
 {
+  s_thread_running.store(true);
+  Common::ScopeGuard running_guard { [] {
+    s_thread_running.store(false);
+  } };
+
   std::unique_lock<std::mutex> lock(s_event_done_mutex);
 
   Common::SetCurrentThreadName("Lua thread");
 
   int result;
-  lua_State *L;
 
-  // All Lua contexts are held in this structure. We work with it almost all the time.
-  L = luaL_newstate();
+  lua_State *L = luaL_newstate();
 
   if (!L)
     return;
 
+  Common::ScopeGuard lua_state_guard{ [L]() { lua_close(L); } };
+
   // Load Lua base libraries
   luaL_openlibs(L);
 
-  // Require the Dolphin library
+  // Require the Dolphin library and call main
   constexpr const char *boot_script =
     "local sysdir, symbols = ...;"
     "package.path = package.path..';'..sysdir..'Lua/?.lua'..';'..sysdir..'Lua/?/init.lua';"
@@ -118,13 +127,11 @@ static void LuaThread()
     lua_pop(L, -1); // []
   }
   // []
-
-  lua_close(L);
 }
 
 static void Dolphin_AddEventMask(uint16_t event)
 {
-  if (event < Event::INVALID) {
+  if (event < Event::ID<Event::None>) {
     unsigned i = 0;
     while (event >= 32) {
       i++;
@@ -136,7 +143,7 @@ static void Dolphin_AddEventMask(uint16_t event)
 
 static void Dolphin_RemoveEventMask(uint16_t event) 
 {
-  if (event < Event::INVALID) {
+  if (event < Event::ID<Event::None>) {
     unsigned i = 0;
     while (event >= 32) {
       i++;
@@ -147,7 +154,7 @@ static void Dolphin_RemoveEventMask(uint16_t event)
 }
 
 static bool TestEvent(uint16_t event) {
-  if (event < Event::INVALID) {
+  if (event < Event::ID<Event::None>) {
     unsigned i = 0;
     while (event >= 32) {
       i++;
@@ -158,58 +165,80 @@ static bool TestEvent(uint16_t event) {
   return false;
 }
 
+bool Detail::IsEventEnabledByID(uint16_t event) {
+  return TestEvent(event);
+}
+
 static bool HasEvent() {
-  return s_event < Event::INVALID;
+  return !s_event_queue.Empty();
+}
+
+// Unboxes the given event into Lua-readable state
+static void UnboxEvent(AnyEvent &event) {
+  std::visit([](auto &&event) -> void {
+    using T = std::decay_t<decltype(event)>;
+
+    if constexpr (std::is_same_v<T, Event::Evaluate>) {
+      Dolphin_Evaluate_Script = event.script.c_str();
+    }
+  }, event);
+}
+
+static void CleanupEvent(AnyEvent &event) {
+  std::visit([](auto &&event) -> void {
+    using T = std::decay_t<decltype(event)>;
+
+    if constexpr (std::is_same_v<T, Event::Evaluate>) {
+      Dolphin_Evaluate_Script = nullptr;
+    }
+  }, event);
+}
+
+static uint16_t AnyEventToID(AnyEvent &event) {
+  return std::visit([](auto &&event) -> uint16_t {
+    return Event::ID<std::decay_t<decltype(event)>>;
+  }, event);
 }
 
 static uint16_t Wait(uint64_t timeout_ms) {
   // The Lua thread already has the mutex locked, so adopt
   std::unique_lock<std::mutex> lock(s_event_done_mutex, std::adopt_lock);
 
-  s_event_set_cond.wait_for(
-    lock,
-    std::chrono::milliseconds(timeout_ms),
-    &Lua::HasEvent
-  );
+  // Clean up any extracted state from the previous event
+  CleanupEvent(s_current_event);
 
-  uint16_t ev = s_event;
-  s_event = Event::INVALID;
+  // Try to pop an event from the queue
+  while (!s_event_queue.Pop(s_current_event)) {
+    // Wait for a Signal to arrive
+    s_event_set_cond.wait_for(
+      lock,
+      std::chrono::milliseconds(timeout_ms),
+      &Lua::HasEvent
+    );
+  }
+
+  // Unbox the data from the new event so Lua can read it
+  UnboxEvent(s_current_event);
 
   // We want to keep the mutex locked while the Lua thread runs, so release (but don't unlock)
   lock.release();
 
-  return ev;
+  return AnyEventToID(s_current_event);
 }
 
-void Signal(uint16_t event) {
-  // Fast exit if the Lua state isn't listening to the signal
-  if (!TestEvent(event)) return;
+static bool HasThreadExited() {
+  return !s_thread_running.load();
+}
 
-  std::unique_lock<std::mutex> siglk(s_event_signal_mutex);
-  std::unique_lock<std::mutex> lk(s_event_done_mutex);
+void Detail::SignalEvent(AnyEvent &&event) {
+  // Avoid pushing events if the thread isn't running
+  if (HasThreadExited()) return;
 
-  // TODO: Compare event masks
-  if (HasEvent()) {
-    // Theres an event already, but the Lua thread hasn't processed it yet.
-    // This _SHOULDN'T_ happen, but document it regardless.
-    PanicAlert("Signal conflict!");
-  }
+  // Put the signal in the queue
+  s_event_queue.Push(std::move(event));
 
-  s_event = event;
-
-  // Unlock so the Lua thread can lock on notify
-  lk.unlock();
-
-  // Allow the Lua thread to lock the lock
+  // Notify Lua that we've given it a signal
   s_event_set_cond.notify_one();
-
-  // Relock so we can exit when the Lua thread is done
-  lk.lock();
-}
-
-void Evaluate(const std::string &script) {
-  Dolphin_Evaluate_Script = script.c_str();
-  Signal(Event::EVALUATE);
 }
 
 static void Dolphin_Log(int level, const char *text) {
