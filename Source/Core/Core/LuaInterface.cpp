@@ -4,7 +4,7 @@
 
 #include "Common/CommonTypes.h"
 #include "Common/FileUtil.h"
-#include "Common/FifoQueue.h"
+#include "Common/SPSCQueue.h"
 #include "Common/Logging/Log.h"
 #include "Common/MsgHandler.h"
 #include "Common/ScopeGuard.h"
@@ -40,7 +40,7 @@ static std::mutex s_event_done_mutex;
 static std::condition_variable s_event_set_cond;
 
 static std::atomic<bool> s_thread_running;
-static Common::FifoQueue<AnyEvent, false> s_event_queue;
+static Common::SPSCQueue<AnyEvent, false> s_event_queue;
 static AnyEvent s_current_event;
 static std::atomic<uint32_t> s_event_mask[8];
 
@@ -262,7 +262,7 @@ static void PushSymbols(lua_State *L) {
   BIND(Dolphin_RemoveEventMask, void(*)(uint16_t event));
   BINDN(Wait, Dolphin_Wait, uint16_t(*)(uint64_t timeout_ms));
   BIND(Dolphin_Evaluate_Script, const char **);
-  BINDN(MsgAlert, Dolphin_MsgAlert, TYPE(bool(*)(bool yes_no, int Style, const char *format, ...)));
+  BINDN(MsgAlert, Dolphin_MsgAlert, TYPE(bool(*)(bool yes_no, MsgType Style, const char *format, ...)));
   BIND(Dolphin_Log, TYPE(void(*)(int level, const char *text)));
 
   BINDN(PowerPC::HostIsRAMAddress, Dolphin_Mem_IsRamAddress, bool(*)(uint32_t address));

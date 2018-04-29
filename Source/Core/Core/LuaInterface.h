@@ -79,6 +79,6 @@ namespace Lua
   }
 
   static inline void PostFrame() {
-    SignalEventLazy<Event::Frame>([]() { return Event::Frame(); });
+    // SignalEventLazy<Event::Frame>([]() { return Event::Frame(); });
   }
 }

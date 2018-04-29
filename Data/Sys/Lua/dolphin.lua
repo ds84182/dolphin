@@ -3,6 +3,12 @@ _G.dolphin = dolphin
 
 local ffi = require "ffi"
 
+ffi.cdef [=[
+enum MsgType {
+	Information, Question, Warning, Critical
+};
+]=]
+
 -- Use FFI to optimally bind FFI functions
 local symbolHeader = {}
 local native = {}
@@ -17,6 +23,8 @@ for symbol, value in pairs(_DOLPHIN_SYMS) do
 		if typeName:sub(1, 4) == "TYPE" then
 			typeName = typeName:sub(6, -2)
 		end
+		-- For enum and struct types, make them FFI-safe
+		typeName = typeName:gsub("MsgType", "enum MsgType")
 		-- If we can find (*), its a function!
 		-- TODO: Use type traits on the C++ side
 		local isFunc = typeName:find("(*)", 1, true)
@@ -49,10 +57,6 @@ struct Dolphin_Event {
 	static const uint16_t EVALUATE = 1;
 	static const uint16_t FRAME = 2;
 	static const uint16_t INVALID = 256;
-};
-
-enum Message_Type {
-  Information, Question, Warning, Critical
 };
 
 struct Log_Level {
